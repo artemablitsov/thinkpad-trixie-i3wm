@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Меню питания на rofi.
+I_LOCK=$'\U000F033E' I_SLEEP=$'\U000F04B2' I_HIB=$'\U000F0717' I_OUT=$'\U000F0343' I_REB=$'\U000F0709' I_OFF=$'\U000F0425'
+opts=(
+  "$I_LOCK  Lock"
+  "$I_SLEEP  Suspend"
+  "$I_HIB  Hibernate"
+  "$I_OUT  Log out"
+  "$I_REB  Reboot"
+  "$I_OFF  Power off"
+)
+sel=$(printf '%s\n' "${opts[@]}" | rofi -dmenu -i -p "power" -theme-str 'window {width: 20em;} listview {lines: 6;}')
+case "$sel" in
+  *Lock)        loginctl lock-session ;;
+  *Suspend)
+    # Сон, гибернация — через HIBERNATE_AFTER_MIN (power.conf), как при простое и
+    # закрытой крышке. Просто «systemctl suspend-then-hibernate» взял бы задержку,
+    # оставшуюся от прошлого раза.
+    HIBERNATE_AFTER_MIN=180
+    # shellcheck disable=SC1091
+    [[ -r /etc/cyberdeck/power.conf ]] && source /etc/cyberdeck/power.conf
+    systemctl start --no-block "cyberdeck-suspend@${HIBERNATE_AFTER_MIN}.service" \
+      || systemctl suspend-then-hibernate ;;
+  *Hibernate)   systemctl hibernate ;;
+  *"Log out")   i3-msg exit ;;
+  *Reboot)      systemctl reboot ;;
+  *"Power off") systemctl poweroff ;;
+esac

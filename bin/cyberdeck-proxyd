@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# cyberdeck-proxyd — «системный прокси» для i3.
+#
+# Hiddify в режиме «Системный прокси» (как и sing-box) записывает настройки в
+# GNOME: gsettings org.gnome.system.proxy. В GNOME их читают все программы, а в
+# i3 — почти никто: программы на Chromium и консольные утилиты берут прокси из
+# переменных окружения http_proxy/https_proxy/all_proxy.
+#
+# Демон следит за gsettings (gsettings monitor — по событиям, без опроса) и при
+# каждом изменении:
+#   • пишет $XDG_RUNTIME_DIR/cyberdeck-proxy.env — его подхватывают уже открытые
+#     терминалы zsh (перед каждым приглашением) и программы, запущенные из rofi
+#     (cyberdeck-run), браузер (cyberdeck-browser) и VS Code;
+#   • передаёт переменные в systemd --user и D-Bus (для программ, которые они запускают);
+#   • показывает уведомление и обновляет значок VPN на панели.
+# Режим «auto» (PAC-файл) в переменные не переводится — для него нужен GNOME.
+set -u
+command -v gsettings >/dev/null || exit 0
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-proxyd.lock"
+flock -n 9 || exit 0
+
+OUT="${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-proxy.env"
+VARS=(http_proxy https_proxy ftp_proxy all_proxy no_proxy HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY NO_PROXY)
+S=org.gnome.system.proxy
+
+g() { local v; v=$(gsettings get "$@" 2>/dev/null) || v=""; v=${v#\'}; v=${v%\'}; printf '%s' "$v"; }
+# Значения приходят от любой программы пользователя — в файл, который выполняет
+# shell, пропускаем только безопасные символы
+HOST_RE='^[][A-Za-z0-9._:-]+$'   # «]» первым в скобках — так он буквальный (для [::1])
+safe_host() { [[ $1 =~ $HOST_RE ]] && printf '%s' "$1"; }
+safe_port() { [[ $1 =~ ^[0-9]{1,5}$ ]] && (( $1 > 0 )) && printf '%s' "$1"; }
+
+last=""
+apply() {
+  local mode hh hp sh sp http="" socks="" ign item list="" state
+  mode=$(g $S mode)
+  if [[ $mode == manual ]]; then
+    hh=$(safe_host "$(g $S.http host)"); hp=$(safe_port "$(g $S.http port)")
+    sh=$(safe_host "$(g $S.socks host)"); sp=$(safe_port "$(g $S.socks port)")
+    [[ -n $hh && -n $hp ]] && http="http://$hh:$hp"
+    [[ -n $sh && -n $sp ]] && socks="socks5h://$sh:$sp"
+    ign=$(gsettings get $S ignore-hosts 2>/dev/null)
+    ign=${ign#[}; ign=${ign%]}
+    IFS=',' read -ra items <<<"$ign"
+    for item in "${items[@]}"; do
+      item=${item//[\' ]/}
+      [[ $item =~ ^[A-Za-z0-9.*:/_-]+$ ]] && list+="${list:+,}$item"
+    done
+    list=${list:-localhost,127.0.0.1,::1}
+  fi
+
+  local tmp="$OUT.tmp"
+  if [[ -n $http || -n $socks ]]; then
+    {
+      echo "# cyberdeck-proxyd: system proxy is ON (gsettings $S)"
+      printf "export http_proxy='%s' https_proxy='%s' ftp_proxy='%s'\n" "${http:-$socks}" "${http:-$socks}" "${http:-$socks}"
+      printf "export HTTP_PROXY='%s' HTTPS_PROXY='%s' FTP_PROXY='%s'\n" "${http:-$socks}" "${http:-$socks}" "${http:-$socks}"
+      printf "export all_proxy='%s' ALL_PROXY='%s'\n" "${socks:-$http}" "${socks:-$http}"
+      printf "export no_proxy='%s' NO_PROXY='%s'\n" "$list" "$list"
+    } > "$tmp"
+    state="on ${http:-$socks}"
+  else
+    { echo "# cyberdeck-proxyd: system proxy is OFF"; echo "unset ${VARS[*]}"; } > "$tmp"
+    state="off"
+  fi
+  mv -f "$tmp" "$OUT"
+
+  # Для программ, которые запускают systemd --user и D-Bus
+  if [[ $state == on* ]]; then
+    # shellcheck disable=SC1090
+    ( source "$OUT"
+      env_args=(); for v in "${VARS[@]}"; do env_args+=("$v=${!v}"); done
+      systemctl --user set-environment "${env_args[@]}" >/dev/null 2>&1
+      dbus-update-activation-environment "${VARS[@]}" >/dev/null 2>&1 )
+  else
+    systemctl --user unset-environment "${VARS[@]}" >/dev/null 2>&1
+  fi
+
+  if [[ -n $last && $state != "$last" ]]; then
+    if [[ $state == on* ]]; then
+      notify-send -a proxy -h string:x-dunst-stack-tag:proxy "System proxy on" "${state#on } · terminals, the browser and newly started apps use it"
+    else
+      notify-send -a proxy -h string:x-dunst-stack-tag:proxy "System proxy off" "Direct connection"
+    fi
+  fi
+  last=$state
+  pkill -USR1 -f "polybar/scripts/status.sh$" 2>/dev/null
+}
+
+apply
+# Hiddify сначала пишет хост и порт, потом режим — смотрим и схему, и подсхемы;
+# пачку событий за полсекунды сворачиваем в одно применение.
+{ gsettings monitor $S & gsettings monitor $S.http & gsettings monitor $S.socks & wait; } 2>/dev/null |
+while read -r _; do
+  while read -r -t 0.5 _; do :; done
+  apply
+done

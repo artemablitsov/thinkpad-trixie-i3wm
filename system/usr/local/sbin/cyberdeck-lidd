@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# cyberdeck-lidd — демон крышки ноутбука (root).
+# logind игнорирует крышку; здесь: через LID_LOCK_MIN блокируем все сессии,
+# через LID_SLEEP_MIN — suspend-then-hibernate с остатком до HIBERNATE_AFTER_MIN.
+# Гашение экрана сразу при закрытии делает пользовательский cyberdeck-idle.
+set -u
+CONF=/etc/cyberdeck/power.conf
+LID_LOCK_MIN=1 LID_SLEEP_MIN=15 HIBERNATE_AFTER_MIN=180
+# shellcheck disable=SC1090
+[[ -r $CONF ]] && source "$CONF"
+
+# Всё в цикле — встроенными средствами bash, без запуска процессов: демон
+# просыпается раз в 2 с всё время работы ноутбука.
+lid_state() { # → LID=open|closed
+  local f _
+  LID=open
+  for f in /proc/acpi/button/lid/*/state; do
+    [[ -r $f ]] && { read -r _ LID < "$f"; return; }
+  done
+}
+
+# Пауза без процесса sleep: read с таймаутом из канала, в который никто не пишет
+exec {NAPFD}<> <(:)
+nap() { read -rt "$1" -u "$NAPFD" _; }
+
+# «Док»: logind считает ноутбук в доке, если подключена док-станция или больше
+# одного монитора. Тогда закрытая крышка — это работа за внешним монитором:
+# не блокируем и не усыпляем (как HandleLidSwitchDocked=ignore).
+docked() {
+  [[ "$(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 \
+        org.freedesktop.login1.Manager Docked 2>/dev/null)" == "b true" ]]
+}
+
+closed_at=0 locked=0 slept=0 prev_state="" dock=0 dock_at=0
+while nap 2 || true; do
+  printf -v now '%(%s)T' -1
+  # Крышку открыли/закрыли — пусть autorandr включит или выключит встроенный экран
+  # (при закрытой крышке с внешним монитором остаётся только внешний)
+  lid_state
+  if [[ -n "$prev_state" && "$LID" != "$prev_state" ]]; then
+    systemctl start --no-block autorandr.service 2>/dev/null
+  fi
+  prev_state=$LID
+  # busctl (процесс) — только пока крышка закрыта и не чаще раза в 10 с
+  # (за внешним монитором с закрытой крышкой можно работать часами)
+  if [[ $LID == closed ]] && (( now - dock_at >= 10 )); then
+    dock=0; docked && dock=1; dock_at=$now
+  fi
+  if [[ $LID == closed ]] && (( !dock )); then
+    (( closed_at == 0 )) && { closed_at=$now; logger -t cyberdeck-lidd "lid closed"; }
+    elapsed=$(( now - closed_at ))
+    if (( !locked && elapsed >= LID_LOCK_MIN*60 )); then
+      loginctl lock-sessions && locked=1
+      logger -t cyberdeck-lidd "sessions locked"
+    fi
+    if (( !slept && elapsed >= LID_SLEEP_MIN*60 )); then
+      slept=1
+      delay=$(( HIBERNATE_AFTER_MIN - LID_SLEEP_MIN ))
+      (( delay < 1 )) && delay=1
+      logger -t cyberdeck-lidd "suspend-then-hibernate, hibernate in ${delay}min"
+      systemctl start --no-block "cyberdeck-suspend@${delay}.service"
+    fi
+  else
+    (( closed_at != 0 )) && logger -t cyberdeck-lidd "lid opened"
+    closed_at=0 locked=0 slept=0
+    [[ $LID == open ]] && dock_at=0     # при следующем закрытии проверить сразу
+  fi
+done

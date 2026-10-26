@@ -1,0 +1,6 @@
+[Unit]
+Description=Cyberdeck: suspend, hibernate after %i min
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cyberdeck-suspend %i

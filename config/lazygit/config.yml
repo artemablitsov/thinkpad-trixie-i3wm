@@ -1,0 +1,24 @@
+# CYBERDECK · lazygit в палитре Nord; diff — через delta
+gui:
+  nerdFontsVersion: "3"
+  border: rounded
+  showRandomTip: false
+  theme:
+    activeBorderColor: ["#88C0D0", bold]
+    inactiveBorderColor: ["#4C566A"]
+    searchingActiveBorderColor: ["#EBCB8B", bold]
+    optionsTextColor: ["#81A1C1"]
+    selectedLineBgColor: ["#3B4252"]
+    inactiveViewSelectedLineBgColor: ["#2E3440"]
+    cherryPickedCommitFgColor: ["#88C0D0"]
+    cherryPickedCommitBgColor: ["#434C5E"]
+    markedBaseCommitFgColor: ["#88C0D0"]
+    markedBaseCommitBgColor: ["#434C5E"]
+    unstagedChangesColor: ["#BF616A"]
+    defaultFgColor: ["#D8DEE9"]
+git:
+  paging:
+    colorArg: always
+    pager: delta --paging=never
+update:
+  method: never

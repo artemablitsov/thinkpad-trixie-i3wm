@@ -1,0 +1,30 @@
+#!/bin/sh
+# cyberdeck-apt-guard — после каждой установки пакетов (DPkg::Post-Invoke).
+#
+# Яндекс Браузер (как и Chrome, у которого взята схема) сам добавляет свой
+# репозиторий ежедневным заданием cron: файлом .list без signed-by и ключом в
+# /etc/apt/trusted.gpg.d. Ключ оттуда apt принимает для ЛЮБОГО репозитория —
+# то есть Яндекс смог бы подписать и «обновление» пакета Debian. Cyberdeck
+# подключает репозиторий сам (ключ только для него), а это — убирает и
+# выключает повторное добавление. То же для дубликата репозитория VS Code.
+#
+# Никогда не ломает apt: все ошибки игнорируются.
+d=/etc/apt/sources.list.d
+if [ -f "$d/cyberdeck-yandex.sources" ]; then
+  for f in "$d"/yandex-browser*.list "$d"/yandex-browser*.sources \
+           /etc/apt/trusted.gpg.d/yandex*.gpg /etc/apt/trusted.gpg.d/yandex*.asc; do
+    [ -e "$f" ] || continue
+    rm -f "$f" && logger -t cyberdeck-apt-guard "removed $f (Cyberdeck manages the Yandex repository)"
+  done
+fi
+for f in /etc/default/yandex-browser /etc/default/yandex-browser-stable /etc/default/yandex-browser-beta; do
+  [ -f "$f" ] || continue
+  for k in repo_add_once repo_reenable_on_distupgrade; do
+    if grep -q "^$k=" "$f"; then sed -i "s/^$k=.*/$k=\"false\"/" "$f"
+    else echo "$k=\"false\"" >> "$f"; fi
+  done
+done
+if [ -f "$d/vscode.sources" ] && [ -e "$d/vscode.list" ]; then
+  rm -f "$d/vscode.list" && logger -t cyberdeck-apt-guard "removed duplicate $d/vscode.list"
+fi
+exit 0

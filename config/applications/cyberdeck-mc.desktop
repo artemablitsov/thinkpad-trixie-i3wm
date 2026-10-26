@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Midnight Commander
+Comment=File manager
+Icon=system-file-manager
+Exec=kitty --class cyberdeck-mc -e mc
+Terminal=false
+Categories=System;FileManager;

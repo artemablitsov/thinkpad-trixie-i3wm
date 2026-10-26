@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Network (nmtui)
+Comment=Wi-Fi networks and settings
+Icon=preferences-system-network
+Exec=cyberdeck-popup network nmtui
+Terminal=false
+Categories=Settings;Network;

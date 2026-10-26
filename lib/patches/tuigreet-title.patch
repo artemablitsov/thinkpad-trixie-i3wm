@@ -1,0 +1,21 @@
+diff --git a/src/ui/prompt.rs b/src/ui/prompt.rs
+index 9d57329..3f24bab 100644
+--- a/src/ui/prompt.rs
++++ b/src/ui/prompt.rs
+@@ -36,9 +36,15 @@ pub fn draw(greeter: &mut Greeter, f: &mut Frame) -> Result<(u16, u16), Box<dyn
+   let container = Rect::new(x, y, width, height);
+   let frame = Rect::new(x + container_padding, y + container_padding, width - (2 * container_padding), height - (2 * container_padding));
+ 
+-  let hostname = Span::from(titleize(&fl!("title_authenticate", hostname = get_hostname())));
++  // Cyberdeck: заголовок из TUIGREET_TITLE (по центру); без неё — как в tuigreet
++  let title_text = match std::env::var("TUIGREET_TITLE") {
++    Ok(title) if !title.trim().is_empty() => title,
++    _ => fl!("title_authenticate", hostname = get_hostname()),
++  };
++  let hostname = Span::from(titleize(&title_text));
+   let block = Block::default()
+     .title(hostname)
++    .title_alignment(Alignment::Center)
+     .title_style(theme.of(&[Themed::Title]))
+     .style(theme.of(&[Themed::Container]))
+     .borders(Borders::ALL)

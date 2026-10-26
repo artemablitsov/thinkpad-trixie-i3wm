@@ -1,0 +1,16 @@
+#!/bin/sh
+# prime-run <программа> [аргументы] — запустить на дискретной NVIDIA.
+# Экран ведёт встроенная графика (батарея живёт дольше), а тяжёлая программа
+# (игра, Blender, CUDA-визуализация) рисует на NVIDIA: PRIME render offload.
+# Проверка: prime-run glxinfo -B | grep 'OpenGL renderer'
+[ $# -gt 0 ] || { echo "usage: prime-run <program> [args]" >&2; exit 2; }
+if [ -e /proc/driver/nvidia/version ] || grep -qs '^nvidia ' /proc/modules; then
+  # Проприетарный драйвер
+  export __NV_PRIME_RENDER_OFFLOAD=1
+  export __GLX_VENDOR_LIBRARY_NAME=nvidia
+  export __VK_LAYER_NV_optimus=NVIDIA_only
+else
+  # nouveau (Mesa)
+  export DRI_PRIME=1
+fi
+exec "$@"

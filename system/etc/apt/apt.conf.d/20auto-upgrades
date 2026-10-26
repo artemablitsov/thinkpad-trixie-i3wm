@@ -1,0 +1,5 @@
+// Cyberdeck: ежедневно обновлять списки пакетов и ставить обновления безопасности
+APT::Periodic::Enable "1";
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";

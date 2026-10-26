@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# cyberdeck-outdated — какие закреплённые компоненты (lib/versions.sh) отстали
+# от последних релизов на GitHub. Ничего не ставит и не меняет: обновление —
+# правка версии и SHA-256 в lib/versions.sh (см. README, «Обновление зависимостей»).
+#
+# Пакеты из apt-репозиториев (Debian, Яндекс, Docker, VS Code, kubectl) сюда не
+# входят — их обновляет unattended-upgrades.
+set -u
+repo=$(cat /var/lib/cyberdeck/repo 2>/dev/null)
+[[ -r "$repo/lib/versions.sh" ]] || repo=$(cd "$(dirname "$(readlink -f "$0")")/.." 2>/dev/null && pwd)
+[[ -r "$repo/lib/versions.sh" ]] || { echo "Cyberdeck lib/versions.sh not found" >&2; exit 2; }
+# shellcheck disable=SC1091
+source "$repo/lib/versions.sh"
+
+B=$'\e[1m' G=$'\e[32m' Y=$'\e[33m' D=$'\e[2m' R=$'\e[0m'
+[[ -t 1 ]] || B="" G="" Y="" D="" R=""
+
+latest_tag() { # latest_tag owner/repo → тег последнего релиза (без пре-релизов)
+  local json
+  json=$(curl -fsSL --max-time 15 -H 'Accept: application/vnd.github+json' \
+    "https://api.github.com/repos/$1/releases/latest" 2>/dev/null) || return 1
+  python3 -Ic 'import json,sys; print(json.load(sys.stdin).get("tag_name",""))' <<<"$json" 2>/dev/null
+}
+
+rc=0
+row() { # row имя закреплено последний
+  local name=$1 have=$2 want=${3//[^A-Za-z0-9._+-]/}   # без управляющих символов из сети
+  if [[ -z "$want" ]]; then
+    printf '  %-12s %-10s %s\n' "$name" "$have" "${D}could not check${R}"
+  elif [[ "${have#v}" == "${want#v}" ]]; then
+    printf '  %-12s %-10s %s\n' "$name" "$have" "${G}up to date${R}"
+  else
+    printf '  %-12s %-10s %s\n' "$name" "$have" "${Y}${B}${want} available${R}"; rc=1
+  fi
+}
+
+echo "${B}Cyberdeck pinned versions${R} ${D}($repo/lib/versions.sh)${R}"
+row neovim    "$NVIM_VERSION"      "$(latest_tag neovim/neovim)"
+row k9s       "$K9S_VERSION"       "$(latest_tag derailed/k9s)"
+row hiddify   "$HIDDIFY_VERSION"   "$(latest_tag hiddify/hiddify-app)"
+row bluetuith "$BLUETUITH_VERSION" "$(latest_tag darkhz/bluetuith)"
+row nerd-font "$NERDFONT_VERSION"  "$(latest_tag ryanoasis/nerd-fonts)"
+row greenclip "$GREENCLIP_VERSION" "$(latest_tag erebe/greenclip)"
+row jolt      "$JOLT_VERSION"      "$(latest_tag jordond/jolt)"
+row gh        "$GH_VERSION"        "$(latest_tag cli/cli)"
+row helm      "$HELM_VERSION"      "$(latest_tag helm/helm)"
+row stern     "$STERN_VERSION"     "$(latest_tag stern/stern)"
+row tofu      "$TOFU_VERSION"      "$(latest_tag opentofu/opentofu)"
+row pdf-tui   "$PDFTUI_VERSION"    "$(latest_tag WindustH/pdf-tui)"
+row uv        "$UV_VERSION"        "$(latest_tag astral-sh/uv)"
+row mise      "$MISE_VERSION"      "$(latest_tag jdx/mise)"
+# kubectl: сравниваем ветку репозитория (vX.Y) с последней стабильной версией
+k8s=$(curl -fsSL --max-time 15 https://dl.k8s.io/release/stable.txt 2>/dev/null)
+row kubectl   "$K8S_MINOR"         "$([[ -n "$k8s" ]] && echo "${k8s%.*}")"
+
+echo
+echo "${D}Themes, oh-my-zsh, i3lock-color and Docxy are pinned to commits — update them by hand."
+echo "Hiddify: a new release may have no Linux build — check its assets.${R}"
+exit $rc

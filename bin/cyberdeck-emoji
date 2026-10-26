@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""cyberdeck-emoji — выбрать эмодзи в rofi (Win+.), вставить в окно и в буфер.
+
+Список строится из базы Unicode самого Python (unicodedata) — без загрузок.
+Поиск по английскому названию: «heart», «fire», «thumbs», «face».
+"""
+import os
+import shutil
+import subprocess
+import sys
+import unicodedata
+
+RANGES = [
+    (0x1F300, 0x1F5FF),  # символы и пиктограммы
+    (0x1F600, 0x1F64F),  # лица
+    (0x1F680, 0x1F6FF),  # транспорт и карты
+    (0x1F900, 0x1F9FF),  # дополнительные символы
+    (0x1FA70, 0x1FAFF),  # символы и пиктограммы, расширение A
+    (0x2600, 0x26FF),    # разные символы
+    (0x2700, 0x27BF),    # дингбаты
+]
+SKIP = set(range(0x1F3FB, 0x1F400))  # модификаторы тона кожи — не отдельные эмодзи
+
+
+def emoji_list():
+    out = []
+    for lo, hi in RANGES:
+        for cp in range(lo, hi + 1):
+            if cp in SKIP:
+                continue
+            ch = chr(cp)
+            name = unicodedata.name(ch, "")
+            if not name:
+                continue
+            # Символы, у которых по умолчанию текстовый вид, — просим цветной (VS16)
+            if cp < 0x1F000:
+                ch += "\uFE0F"
+            out.append(f"{ch}  {name.lower()}")
+    return out
+
+
+def main():
+    if not shutil.which("rofi"):
+        sys.exit("rofi not found")
+    pick = subprocess.run(
+        ["rofi", "-dmenu", "-i", "-p", "emoji", "-no-custom", "-matching", "fuzzy"],
+        input="\n".join(emoji_list()), capture_output=True, text=True,
+    ).stdout.strip()
+    if not pick:
+        return
+    ch = pick.split("  ", 1)[0]
+    subprocess.run(["xclip", "-selection", "clipboard"], input=ch, text=True)
+    # rofi уже закрылся — печатаем в окно, которое было в фокусе
+    if shutil.which("xdotool") and not os.environ.get("CYBERDECK_EMOJI_COPY_ONLY"):
+        subprocess.run(["xdotool", "type", "--clearmodifiers", "--", ch])
+
+
+if __name__ == "__main__":
+    main()

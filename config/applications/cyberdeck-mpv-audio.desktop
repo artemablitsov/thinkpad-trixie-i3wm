@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Music (mpv)
+Comment=Play mp3/flac
+Icon=multimedia-audio-player
+Exec=kitty --class cyberdeck-music -e cyberdeck-pick audio
+Terminal=false
+Categories=AudioVideo;Audio;Player;

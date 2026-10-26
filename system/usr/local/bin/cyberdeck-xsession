@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Запуск X-сессии Cyberdeck (вызывается startx из tuigreet или ~/.xinitrc).
+# shellcheck disable=SC1090,SC1091
+[[ -r /etc/profile ]] && source /etc/profile
+[[ -r "$HOME/.profile" ]] && source "$HOME/.profile"
+[[ -r "$HOME/.config/cyberdeck/env.sh" ]] && source "$HOME/.config/cyberdeck/env.sh"
+
+export XDG_CURRENT_DESKTOP=i3
+export XDG_SESSION_DESKTOP=i3
+export XDG_SESSION_TYPE=x11
+
+# Масштаб интерфейса этой машины (HW_SCALE в /etc/cyberdeck/hardware.conf):
+#   Xft.dpi (ниже, xrdb) — шрифты i3, polybar, kitty, rofi, dunst, Chromium/Electron;
+#   GTK — через xsettingsd (cyberdeck-xsettingsd), Qt — QT_SCALE_FACTOR
+#   (QT_FONT_DPI=96, иначе Qt увеличил бы шрифты дважды: и по Xft.dpi, и по фактору).
+CD_SCALE=$(cyberdeck-scale 2>/dev/null || echo 100)
+export CD_SCALE
+CD_DPI=$(( 96 * CD_SCALE / 100 ))
+XCURSOR_SIZE=$(( (24 * CD_SCALE + 50) / 100 ))
+export XCURSOR_SIZE
+if (( CD_SCALE != 100 )); then
+  QT_SCALE_FACTOR=$(printf '%d.%02d' $(( CD_SCALE / 100 )) $(( CD_SCALE % 100 )))
+  export QT_SCALE_FACTOR QT_FONT_DPI=96
+fi
+
+# Связка ключей: при входе её уже разблокировал PAM (пароль из tuigreet), здесь
+# поднимаем Secret Service — через него VS Code, браузер и docker хранят пароли.
+if command -v gnome-keyring-daemon >/dev/null; then
+  eval "$(gnome-keyring-daemon --start --components=secrets 2>/dev/null)"
+  export GNOME_KEYRING_CONTROL
+fi
+
+# ssh-agent на сессию: ключ расшифровывается один раз при первом ssh/git
+# (AddKeysToAgent в ~/.ssh/config) и забывается через 10 ч или при выходе.
+own_agent=0
+if [[ -z "${SSH_AUTH_SOCK:-}" ]] && command -v ssh-agent >/dev/null; then
+  export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/tmp}/ssh-agent.socket"
+  ssh-add -l >/dev/null 2>&1
+  if (( $? == 2 )); then      # 2 — агент не отвечает (нет или остался сокет от прошлой сессии)
+    rm -f "$SSH_AUTH_SOCK"
+    eval "$(ssh-agent -a "$SSH_AUTH_SOCK" -t 10h -s)" >/dev/null && own_agent=1
+  fi
+fi
+
+# Передаём окружение в systemd --user и D-Bus (порталы, polkit, pipewire, GTK-приложения)
+dbus-update-activation-environment --systemd DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP \
+  SSH_AUTH_SOCK GNOME_KEYRING_CONTROL \
+  XDG_SESSION_DESKTOP XDG_SESSION_TYPE QT_QPA_PLATFORMTHEME QT_STYLE_OVERRIDE GTK2_RC_FILES \
+  XCURSOR_THEME XCURSOR_SIZE CD_SCALE QT_SCALE_FACTOR QT_FONT_DPI PATH LANG LC_TIME LC_NUMERIC LC_MONETARY LC_PAPER LC_MEASUREMENT 2>/dev/null || true
+
+[[ -r "$HOME/.Xresources" ]] && xrdb -merge "$HOME/.Xresources"
+[[ -r "$HOME/.config/cyberdeck-cursor.Xresources" ]] && xrdb -merge "$HOME/.config/cyberdeck-cursor.Xresources"
+printf 'Xft.dpi: %s\nXcursor.size: %s\n' "$CD_DPI" "$XCURSOR_SIZE" | xrdb -merge
+
+i3
+rc=$?
+# Выход из i3 — ключи SSH из памяти тоже уходят
+(( own_agent )) && ssh-agent -k >/dev/null 2>&1
+exit $rc

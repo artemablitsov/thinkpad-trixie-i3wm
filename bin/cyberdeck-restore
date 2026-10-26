@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+# cyberdeck-restore — bring back what the Cyberdeck installer replaced.
+#
+#   cyberdeck-restore              list: system files (*.cyberdeck.orig)
+#                                  and installer runs with backups of your files
+#   sudo cyberdeck-restore system PATH   restore one system file
+#                                        (for example /etc/pam.d/sudo)
+#   cyberdeck-restore home RUN           put your files from a run's backup back
+#                                        in place (instead of Cyberdeck symlinks)
+#
+# Nothing is deleted without asking; the current version of each file is kept
+# next to it as *.cyberdeck.replaced.
+set -u
+B=$'\e[1m' D=$'\e[2m' R=$'\e[0m'
+[[ -t 1 ]] || B="" D="" R=""
+HB="$HOME/.cyberdeck-backup"
+
+list() {
+  echo "${B}System files replaced by Cyberdeck${R} ${D}(restore: sudo cyberdeck-restore system PATH)${R}"
+  local f n=0
+  while IFS= read -r f; do
+    printf '  %s\n' "${f%.cyberdeck.orig}"; n=$((n+1))
+  done < <(find /etc /usr/share/applications -name '*.cyberdeck.orig' 2>/dev/null | sort)
+  (( n )) || echo "  ${D}none${R}"
+  echo
+  echo "${B}Backups of your files${R} ${D}(restore: cyberdeck-restore home RUN)${R}"
+  if compgen -G "$HB/*" >/dev/null; then
+    for d in "$HB"/*/; do
+      d=${d%/}; printf '  %s  %s\n' "${d##*/}" "$(cd "$d" && find . -mindepth 1 \( -type f -o -type l \) -printf '%P\n' | sed 's#^#~/#' | tr '\n' ' ' | cut -c1-100)"
+    done
+  else
+    echo "  ${D}none${R}"
+  fi
+}
+
+restore_system() {
+  local p="${1:?path}" o="$1.cyberdeck.orig"
+  [[ $EUID -eq 0 ]] || { echo "Root is required: sudo cyberdeck-restore system $p" >&2; exit 1; }
+  [[ -e "$o" ]] || { echo "No backup $o" >&2; exit 1; }
+  read -rp "Restore the original $p? [y/N] " a; [[ $a == [yY]* ]] || exit 0
+  [[ -e "$p" ]] && cp -a "$p" "$p.cyberdeck.replaced"
+  cp -a "$o" "$p" && echo "Done. The Cyberdeck version is in $p.cyberdeck.replaced"
+  case "$p" in
+    /etc/grub.d/*) chmod a+x "$p"; chmod a-x "$p.cyberdeck.replaced" 2>/dev/null; echo "Apply it: sudo update-grub" ;;
+    /etc/pam.d/*) echo "Check that you can still authenticate in a new terminal (sudo -v) before closing this one." ;;
+    /etc/default/grub) echo "Apply it: sudo update-grub" ;;
+  esac
+}
+
+restore_home() {
+  local run="${1:?run}" src="$HB/$1" rel dst a
+  [[ $EUID -ne 0 ]] || { echo "Run this as your own user, without sudo" >&2; exit 1; }
+  [[ -d "$src" ]] || { echo "No backup $src (see cyberdeck-restore)" >&2; exit 1; }
+  # Копии лежат по путям относительно ~. В копиях старых версий установщика
+  # пути не сохранялись (только имена) — такие файлы вернутся прямо в ~.
+  mapfile -t files < <(cd "$src" && find . -mindepth 1 \( -type f -o -type l \) -printf '%P\n' | sort)
+  (( ${#files[@]} )) || { echo "Backup $run is empty"; exit 0; }
+  printf '  ~/%s\n' "${files[@]}"
+  [[ " ${files[*]}" == */* ]] || echo "${D}This backup has no paths (older installer) — files will go straight into ~${R}"
+  read -rp "Restore these files (current ones are kept as *.cyberdeck.replaced)? [y/N] " a
+  [[ $a == [yY]* ]] || exit 0
+  for rel in "${files[@]}"; do
+    dst="$HOME/$rel"
+    [[ -e "$dst" || -L "$dst" ]] && mv "$dst" "$dst.cyberdeck.replaced"
+    mkdir -p "$(dirname "$dst")" && cp -a "$src/$rel" "$dst" && echo "  ✓ ~/$rel"
+  done
+  echo "Cyberdeck symlinks replaced with your files. Running the installer again will put the symlinks back."
+}
+
+case "${1:-list}" in
+  list|-l) list ;;
+  system)  restore_system "${2:-}" ;;
+  home)    restore_home "${2:-}" ;;
+  -h|--help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) echo "Unknown command: $1 (see --help)" >&2; exit 2 ;;
+esac

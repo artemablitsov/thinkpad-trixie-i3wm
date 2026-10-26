@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# cyberdeck-pdf-raster — pdftoppm для pdf-tui, страницы в цветах Nord.
+#
+# pdf-tui (render.pdftoppm_bin в ~/.config/pdf-tui/config.toml) вызывает его так
+# же, как pdftoppm: «… -png <файл.pdf> <префикс>». Скрипт запускает настоящий
+# pdftoppm, а получившиеся PNG перекрашивает: белая бумага → nord0 (#2E3440),
+# чёрный текст → nord4 (#D8DEE9).
+#
+# Инвертируется только светлота (канал L в HSL), оттенок и насыщенность остаются:
+# синий столбик графика остаётся синим, зелёный — зелёным (простая замена
+# чёрного и белого перекрасила бы синий в коричневый). Фотографии при этом
+# выглядят непривычно — светлое становится тёмным.
+#
+# Вырезки для копирования (выделение мышью, Y — с -x/-y/-W/-H) не перекрашиваются:
+# в буфер обмена уходит фрагмент в настоящих цветах.
+#
+# Готовые страницы pdf-tui хранит в кэше; после смены цветов: rm -rf ~/.cache/pdf-tui
+set -u
+PAPER='#2E3440'   # nord0 — фон страницы
+INK='#D8DEE9'     # nord4 — текст
+
+pdftoppm "$@" || exit
+prefix=${!#}
+for a in "$@"; do [[ $a == -W ]] && exit 0; done
+
+shopt -s nullglob
+# Только файлы этого запуска: <префикс>.png (-singlefile) и <префикс>-<номер>.png
+files=("$prefix".pn[g] "$prefix"-[0-9]*.png)   # [g] — чтобы nullglob убрал несуществующий
+(( ${#files[@]} )) || exit 0
+# В HSL у ImageMagick каналы R,G,B — это H,S,L: -channel B -negate инвертирует
+# светлоту; затем чёрный → nord0, белый → nord4
+mog=(mogrify); command -v magick >/dev/null && mog=(magick mogrify)
+"${mog[@]}" -colorspace HSL -channel B -negate +channel -colorspace sRGB \
+  +level-colors "$PAPER,$INK" "${files[@]}"

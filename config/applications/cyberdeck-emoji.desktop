@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Emoji
+Comment=Pick an emoji · Win+.
+Icon=face-smile
+Terminal=false
+Exec=cyberdeck-emoji
+Categories=Utility;

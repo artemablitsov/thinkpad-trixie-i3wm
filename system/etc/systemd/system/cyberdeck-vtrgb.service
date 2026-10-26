@@ -1,0 +1,16 @@
+[Unit]
+Description=Cyberdeck: Nord palette for consoles (right before the greeter)
+# Основная палитра Nord задаётся в ядре (vt.default_red/grn/blu, модуль grub).
+# Эта служба — подстраховка, если параметры ядра убрали: применяет палитру уже
+# ПОСЛЕ выхода plymouth (его выход сбрасывает палитру консоли).
+After=systemd-user-sessions.service systemd-vconsole-setup.service console-setup.service
+After=plymouth-quit.service plymouth-quit-wait.service
+Before=greetd.service getty@tty2.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/cyberdeck-console nord
+
+[Install]
+WantedBy=multi-user.target

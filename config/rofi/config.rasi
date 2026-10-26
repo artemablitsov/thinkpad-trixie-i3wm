@@ -1,0 +1,22 @@
+configuration {
+    modi:                "drun,run,window";
+    show-icons:          false;
+    terminal:            "kitty";
+    font:                "JetBrainsMono Nerd Font 12";
+    drun-display-format: "{name}";
+    display-drun:        "apps";
+    display-run:         "run";
+    display-window:      "windows";
+    matching:            "fuzzy";
+    sort:                true;
+    sorting-method:      "fzf";
+    disable-history:     false;
+    hover-select:        true;
+    me-select-entry:     "";
+    me-accept-entry:     "MousePrimary";
+    run-shell-command:   "{terminal} -e cyberdeck-run {cmd}";
+    /* cyberdeck-run добавляет актуальный системный прокси (Hiddify) */
+    run-command:         "cyberdeck-run {cmd}";
+}
+
+@theme "~/.config/rofi/nord.rasi"

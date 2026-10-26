@@ -1,0 +1,21 @@
+// Cyberdeck: дополнения к 50unattended-upgrades (файл пакета не трогаем).
+
+// Источники: из 50unattended-upgrades — обновления безопасности и исправления
+// стабильного Debian; плюс сторонние репозитории Cyberdeck. Браузер и Docker
+// (containerd, runc) — то, через что атакуют чаще всего, их обновления не ждут
+// ручного `update`. Списки apt из разных файлов складываются.
+Unattended-Upgrade::Origins-Pattern {
+        "site=repo.yandex.ru";          // Яндекс Браузер
+        "site=download.docker.com";     // Docker CE, containerd, runc
+        "site=packages.microsoft.com";  // VS Code
+        "site=pkgs.k8s.io";             // kubectl (патчи внутри выбранной ветки)
+};
+
+// Ноутбук: не ставить на батарее, не перезагружать самостоятельно,
+// ставить небольшими порциями, чтобы выключение не прервало установку.
+Unattended-Upgrade::OnlyOnACPower "true";
+Unattended-Upgrade::Skip-Updates-On-Metered-Connections "true";
+Unattended-Upgrade::Automatic-Reboot "false";
+Unattended-Upgrade::MinimalSteps "true";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-New-Unused-Dependencies "true";

@@ -1,0 +1,23 @@
+#!/bin/sh
+# cyberdeck-console nord|black|blank — палитра и состояние текстовых консолей.
+#
+#   nord   — палитра Nord (перед экраном входа; до него экран чисто чёрный);
+#   black  — стандартная палитра, фон — настоящий чёрный;
+#   blank  — при выключении: чёрная палитра, пустая консоль tty11 без курсора,
+#            переключение на неё. Так после завершения X не видно ни остатков
+#            сеанса, ни сообщений systemd «Stopping …».
+BLANK_VT=11
+case "${1:-}" in
+  nord)  setvtrgb /etc/cyberdeck/vtrgb ;;
+  black) setvtrgb vga ;;
+  blank)
+    # Если загрузка идёт с plymouth (splash), экран выключения показывает он —
+    # не переключаем консоль, чтобы не отобрать у него экран
+    if command -v plymouth >/dev/null 2>&1 && grep -qw splash /proc/cmdline; then exit 0; fi
+    setvtrgb vga 2>/dev/null
+    printf '\033[2J\033[H\033[?25l' > /dev/tty$BLANK_VT 2>/dev/null
+    chvt $BLANK_VT 2>/dev/null
+    ;;
+  *) echo "usage: $0 nord|black|blank" >&2; exit 2 ;;
+esac
+exit 0

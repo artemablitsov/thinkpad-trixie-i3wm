@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Calendar (khal)
+Comment=Calendar
+Icon=office-calendar
+Exec=cyberdeck-popup calendar ikhal
+Terminal=false
+Categories=Office;Calendar;

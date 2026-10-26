@@ -1,0 +1,8 @@
+# CYBERDECK · глобальный .gitignore (~/.config/git/ignore)
+*~
+*.swp
+.*.swp
+.DS_Store
+.direnv/
+.mise.local.toml
+.env.local

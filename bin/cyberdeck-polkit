@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Запуск первого доступного графического polkit-агента (всплывающее окно пароля).
+for a in /usr/bin/lxpolkit \
+         /usr/libexec/polkit-mate-authentication-agent-1 \
+         /usr/lib/x86_64-linux-gnu/polkit-mate/polkit-mate-authentication-agent-1 \
+         /usr/bin/lxqt-policykit-agent; do
+  [[ -x $a ]] && exec "$a"
+done
+notify-send -u critical "Cyberdeck" "No polkit agent found"

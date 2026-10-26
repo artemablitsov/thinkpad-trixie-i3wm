@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# cyberdeck-lockd — блокирует экран по сигналу Lock от logind (loginctl
+# lock-session / lock-sessions: простой, крышка, Win+Esc, перед сном).
+#
+# Вместо xss-lock. xss-lock блокирует экран ещё и когда X включает «хранитель
+# экрана», а X включает его при любом «xset dpms force off». Экран гаснет сразу
+# при закрытии крышки и через 5 минут простоя — и xss-lock тут же запирал его,
+# хотя блокировка должна быть только через 1 и 10 минут.
+#
+# Блокировку перед сном и гибернацией гарантирует системный хук
+# /usr/lib/systemd/system-sleep/cyberdeck-lock (он сам вызывает lock-sessions и
+# ждёт, пока замок появится на экране).
+set -u
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-lockd.lock"
+flock -n 9 || exit 0
+
+L=org.freedesktop.login1
+sid=${XDG_SESSION_ID:-}
+# Без XDG_SESSION_ID — графическая сессия пользователя
+[[ -n $sid ]] || sid=$(loginctl show-user "$(id -u)" -p Display --value 2>/dev/null)
+[[ -n $sid ]] || { echo "cyberdeck-lockd: no logind session" >&2; exit 1; }
+path=$(busctl call $L /org/freedesktop/login1 $L.Manager GetSession s "$sid" 2>/dev/null | awk '{print $2}' | tr -d '"')
+[[ $path == /org/freedesktop/login1/session/* ]] || { echo "cyberdeck-lockd: session $sid not found" >&2; exit 1; }
+
+# «/org/freedesktop/login1/session/_32: org.freedesktop.login1.Session.Lock ()»
+gdbus monitor --system --dest $L --object-path "$path" 2>/dev/null 9>&- |
+while read -r line; do
+  [[ $line == *"$L.Session.Lock ("* ]] || continue
+  cyberdeck-lock 9>&- &
+done

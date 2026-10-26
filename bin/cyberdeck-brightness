@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# cyberdeck-brightness up|down [шаг%] — яркость встроенного экрана (Fn+F5/F6).
+# Берём панель видеокарты (amdgpu_bl*, intel_backlight, nvidia_*), а не
+# acpi_video0 — он бывает рядом и не работает (на T14s Gen2 AMD — так),
+# не опускаем ниже 1 % (экран не гаснет полностью), показываем полоску внизу экрана.
+dir="${1:?up|down}" step="${2:-5}"
+
+dev=""
+for d in /sys/class/backlight/{amdgpu_bl*,intel_backlight,nvidia_*,thinkpad_screen} /sys/class/backlight/*; do
+  [[ -e "$d/brightness" ]] && { dev=${d##*/}; break; }
+done
+[[ -n "$dev" ]] || { notify-send -u critical "Brightness" "No backlight device found"; exit 1; }
+
+max=$(<"/sys/class/backlight/$dev/max_brightness")
+cur=$(<"/sys/class/backlight/$dev/brightness")
+pct=$(( (cur * 100 + max / 2) / max ))
+
+case "$dir" in
+  up)   pct=$(( pct + step )) ;;
+  down) pct=$(( pct - step )) ;;
+  *)    echo "up|down" >&2; exit 2 ;;
+esac
+(( pct > 100 )) && pct=100
+(( pct < 1 ))   && pct=1
+
+if ! brightnessctl -q -d "$dev" set "${pct}%"; then
+  notify-send -u critical "Brightness" "No permission for $dev — log out and back in (video group)"
+  exit 1
+fi
+cyberdeck-osd bright "$pct"

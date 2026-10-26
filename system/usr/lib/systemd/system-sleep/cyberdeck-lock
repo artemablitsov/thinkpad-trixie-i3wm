@@ -1,0 +1,98 @@
+#!/bin/bash
+# Cyberdeck: экран гарантированно заблокирован до сна/гибернации и после пробуждения.
+#
+# systemd-sleep вызывает этот файл: «pre <тип>» — перед сном, «post <тип>» — после.
+#
+# pre:  для каждой графической сессии (запущенного i3) — loginctl lock-sessions
+#       (cyberdeck-lockd запускает cyberdeck-lock) и ожидание, пока i3lock появится.
+#       Если за 3 с его нет (cyberdeck-lockd не запущен, упал) — замок запускается
+#       напрямую от имени пользователя. Только после этого система засыпает, и в
+#       образ гибернации попадает уже заблокированный экран.
+# post: если замок, стоявший перед сном, после пробуждения исчез (упал при
+#       переинициализации видеокарты и т.п.) — запускается снова. Иначе после
+#       пароля диска сессия открылась бы без пароля пользователя.
+set -u
+STATE=/run/cyberdeck-sleep-locked
+
+locked() { pgrep -u "$1" -x 'i3lock|i3lock-color' >/dev/null; }
+
+wait_locked() { # wait_locked <пользователь> <десятые доли секунды>
+  local i
+  for ((i = 0; i < $2; i++)); do locked "$1" && return 0; sleep 0.1; done
+  return 1
+}
+
+# Запустить замок напрямую: DISPLAY и XAUTHORITY — из окружения i3 этого пользователя
+lock_direct() { # lock_direct <пользователь> <uid> <display>
+  local user=$1 disp=$3 pid xauth=""
+  pid=$(pgrep -u "$user" -x i3 | head -n1)
+  if [[ -n $pid && -r /proc/$pid/environ ]]; then
+    xauth=$(tr '\0' '\n' < "/proc/$pid/environ" | sed -n 's/^XAUTHORITY=//p' | head -n1)
+  fi
+  [[ -n $xauth ]] || xauth=$(getent passwd "$user" | cut -d: -f6)/.Xauthority
+  # Через systemd пользователя: процессы, запущенные прямо отсюда, systemd убил бы
+  # вместе со службой сна, как только она завершится
+  systemd-run --quiet --collect --machine="$user@" --user \
+    --unit="cyberdeck-sleep-lock-$(date +%s%N)" \
+    -E DISPLAY="$disp" -E XAUTHORITY="$xauth" \
+    /usr/local/bin/cyberdeck-lock >/dev/null 2>&1
+  wait_locked "$user" 30
+}
+
+# Графические сессии: «пользователь uid дисплей» — по запущенным i3 (тип сессии
+# logind не годится: X поднимается через startx из greetd, и сессия бывает «tty»)
+x_sessions() {
+  local pid user uid disp
+  for pid in $(pgrep -x i3); do
+    user=$(ps -o user= -p "$pid" | tr -d ' ')
+    uid=$(id -u "$user" 2>/dev/null) || continue
+    disp=$(tr '\0' '\n' < "/proc/$pid/environ" 2>/dev/null | sed -n 's/^DISPLAY=//p' | head -n1)
+    echo "$user $uid ${disp:-:0}"
+  done | sort -u
+}
+
+# Замок запущен только что (меньше 2 с назад)?
+fresh_lock() {
+  local age pids
+  pids=$(pgrep -u "$1" -x 'i3lock|i3lock-color' | paste -sd,)
+  [[ -n $pids ]] || return 1
+  age=$(ps -o etimes= -p "$pids" 2>/dev/null | sort -n | head -n1 | tr -d ' ')
+  [[ -n $age ]] && (( age < 2 ))
+}
+
+case "${1:-}" in
+  pre)
+    : > "$STATE"
+    need_paint=0
+    loginctl lock-sessions 2>/dev/null
+    while read -r user uid disp; do
+      [[ -n $user ]] || continue
+      if wait_locked "$user" 30 || lock_direct "$user" "$uid" "$disp"; then
+        echo "$user $uid $disp" >> "$STATE"
+        fresh_lock "$user" && need_paint=1
+      else
+        echo "cyberdeck-lock: could not lock the screen of $user before ${2:-sleep}" >&2
+      fi
+    done < <(x_sessions)
+    # Окно замка уже есть, но picom мог ещё не вывести его на экран. Тогда после
+    # пробуждения монитор сначала показал бы последний кадр — рабочий стол — и
+    # лишь потом замок. Секунда на отрисовку, если замок только что появился.
+    (( need_paint )) && sleep 1
+    ;;
+  post)
+    # Задержка гибернации, записанная cyberdeck-suspend для этого сна, своё
+    # отработала. Иначе следующий сон клавишей сна (Fn+4) взял бы её, а не обычную
+    # из /etc/systemd/sleep.conf.d (например, 2 минуты после проверки).
+    rm -f /run/systemd/sleep.conf.d/50-cyberdeck-delay.conf
+    [[ -r $STATE ]] || exit 0
+    # Дать X и i3lock прийти в себя после пробуждения
+    sleep 1
+    while read -r user uid disp; do
+      [[ -n $user ]] || continue
+      locked "$user" || lock_direct "$user" "$uid" "$disp" \
+        || echo "cyberdeck-lock: could not lock the screen of $user after ${2:-sleep}" >&2
+    done < "$STATE"
+    rm -f "$STATE"
+    ;;
+esac
+exit 0

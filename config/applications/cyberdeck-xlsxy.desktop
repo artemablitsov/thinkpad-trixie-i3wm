@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Xlsxy
+Comment=Spreadsheets: xlsx, xls, csv, tsv
+Icon=x-office-spreadsheet
+Exec=kitty --class cyberdeck-xlsxy -e xlsxy
+Terminal=false
+Categories=Office;Spreadsheet;

@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# cyberdeck-osd — полоска громкости и яркости внизу экрана (xob) для Fn-клавиш.
+#
+#   cyberdeck-osd start             — (пере)запустить: i3 при входе, autorandr при
+#                                     смене мониторов (полоска — по центру основного)
+#   cyberdeck-osd vol <0-100> [mute] — показать громкость (mute — серая полоса)
+#   cyberdeck-osd bright <1-100>     — показать яркость
+#   cyberdeck-osd mic <0-100> [mute] — микрофон: зелёная полоса (уровень) или
+#                                      красная, если выключен
+#   cyberdeck-osd kbd <0-100>        — подсветка клавиатуры (фиолетовая, nord15)
+#   cyberdeck-osd kbd-watch          — следить за подсветкой клавиатуры (запускает start)
+#
+# Подсветку клавиатуры ThinkPad (Fn+Space) переключает сама прошивка — нажатие
+# не доходит до X как клавиша. Об изменении сообщает UPower (сигнал
+# BrightnessChangedWithSource), за ним и следит kbd-watch, без опроса.
+#
+# Четыре экземпляра xob — громкость (голубая, nord8), яркость (жёлтая, nord13),
+# микрофон (зелёная, nord14 / красная, nord11) и подсветка клавиатуры
+# (фиолетовая, nord15) — читают числа из своих FIFO в $XDG_RUNTIME_DIR. Если xob
+# не запущен (не собрался), показывается уведомление dunst с полосой прогресса.
+set -u
+RT=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}   # autorandr может вызвать без XDG_RUNTIME_DIR
+CFG="$RT/cyberdeck-osd.cfg"
+
+# Полоска: 320×14 px, рамка 2 + отступ 2, в 72 px от нижнего края — при 100 %;
+# на 2.8K/4K всё растёт по масштабу экрана (cyberdeck-scale)
+S=$(cyberdeck-scale 2>/dev/null || echo 100)
+px() { echo $(( ($1 * S + 50) / 100 )); }
+LEN=$(px 320) THICK=$(px 14) BORDER=$(px 2) PAD=$(px 2) BOTTOM=$(px 72)
+
+start() {
+  local name pid geo w h x y bx by fat
+  # Прежние экземпляры: xob и следящие за подсветкой (gdbus и сам скрипт)
+  for name in vol bright mic kbd; do
+    pid=$(cat "$RT/cyberdeck-osd-$name.pid" 2>/dev/null) || continue
+    [[ "$(cat "/proc/$pid/comm" 2>/dev/null)" == xob ]] && kill "$pid" 2>/dev/null
+  done
+  for pid in $(cat "$RT/cyberdeck-osd-kbdwatch.pid" 2>/dev/null); do
+    # Только свои процессы: «cyberdeck-osd kbd-watch» и «gdbus monitor … KbdBacklight»
+    [[ "$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null)" == *@(kbd-watch|KbdBacklight)* ]] \
+      && kill "$pid" 2>/dev/null
+  done
+  # Подсветка клавиатуры — и без xob (тогда уведомлением dunst)
+  if compgen -G '/sys/class/leds/*kbd_backlight' >/dev/null; then
+    "$0" kbd-watch </dev/null >/dev/null 2>&1 &
+  fi
+  command -v xob >/dev/null || return 0
+  # Основной монитор: «0: +*eDP 1920/309x1080/174+0+0  eDP» → 1920 1080 0 0
+  geo=$(xrandr --listactivemonitors 2>/dev/null | awk '
+    NR > 1 { split($3, a, /[\/x+]/); g = a[1] " " a[3] " " a[5] " " a[6]
+             if (!first) first = g; if ($2 ~ /\*/) prim = g }
+    END { print (prim ? prim : first) }')
+  read -r w h x y <<<"${geo:-1920 1080 0 0}"
+  fat=$(( BORDER + PAD ))
+  # xob: при relative = 0 offset — это левый/верхний край в пикселях
+  bx=$(( x + (w - LEN - 2 * fat) / 2 ))
+  by=$(( y + h - BOTTOM - THICK - 2 * fat ))
+  style() { # style <имя> <цвет полосы> [цвет «выключено»]
+    cat <<EOF
+$1 = {
+  x = {relative = 0; offset = $bx;};
+  y = {relative = 0; offset = $by;};
+  length = {relative = 0; offset = $LEN;};
+  thickness = $THICK;
+  outline = 0;
+  border = $BORDER;
+  padding = $PAD;
+  orientation = "horizontal";
+  overflow = "proportional";
+  color = {
+    normal      = {fg = "$2"; bg = "#2E3440E6"; border = "#4C566A";};
+    alt         = {fg = "${3:-#4C566A}"; bg = "#2E3440E6"; border = "#4C566A";};
+    overflow    = {fg = "#D08770"; bg = "#2E3440E6"; border = "#4C566A";};
+    altoverflow = {fg = "#4C566A"; bg = "#2E3440E6"; border = "#4C566A";};
+  };
+};
+EOF
+  }
+  { style volume '#88C0D0'; style brightness '#EBCB8B'; style mic '#A3BE8C' '#BF616A'
+    style keyboard '#B48EAD'; } > "$CFG"
+  launch vol volume
+  launch bright brightness
+  launch mic mic
+  launch kbd keyboard
+}
+
+kbd_watch() {
+  local U=org.freedesktop.UPower path=/org/freedesktop/UPower/KbdBacklight max line v gpid
+  max=$(gdbus call --system --dest $U --object-path $path \
+          --method $U.KbdBacklight.GetMaxBrightness 2>/dev/null | grep -oE '[0-9]+' | tail -n1)
+  [[ ${max:-0} -gt 0 ]] || max=2          # ThinkPad: 0 — выкл, 1 — слабо, 2 — ярко
+  exec {fd}< <(exec gdbus monitor --system --dest $U --object-path $path 2>/dev/null)
+  gpid=$!
+  echo "$$ $gpid" > "$RT/cyberdeck-osd-kbdwatch.pid"
+  # «…KbdBacklight.BrightnessChangedWithSource (1, 'internal')»
+  while read -r -u "$fd" line; do
+    [[ $line == *BrightnessChangedWithSource* ]] || continue
+    v=${line##*\(}; v=${v%%,*}; v=${v#int32 }; v=${v//[!0-9]/}
+    [[ -n $v ]] || continue
+    send kbd "$(( v * 100 / max ))" "Keyboard backlight" "$v/$max"
+  done
+}
+
+launch() { # launch <fifo> <стиль>
+  local fifo="$RT/cyberdeck-osd-$1.fifo"
+  [[ -p $fifo ]] || { rm -f "$fifo"; mkfifo -m 600 "$fifo"; }
+  # stdin открыт на чтение и запись: xob не получит EOF, когда пишущий закроется
+  xob -c "$CFG" -s "$2" -t 1200 <>"$fifo" >/dev/null 2>&1 &
+  echo $! > "$RT/cyberdeck-osd-$1.pid"
+}
+
+send() { # send <fifo> <значение> <запасной заголовок> <подпись>
+  local fifo="$RT/cyberdeck-osd-$1.fifo" pid fd
+  pid=$(cat "$RT/cyberdeck-osd-$1.pid" 2>/dev/null)
+  # Жив ли именно xob (номер процесса мог достаться другой программе)
+  if [[ -n $pid && -p $fifo && "$(cat "/proc/$pid/comm" 2>/dev/null)" == xob ]]; then
+    # Открытие на чтение и запись не блокируется, даже если xob вдруг не читает
+    exec {fd}<>"$fifo" && { echo "$2" >&"$fd"; exec {fd}>&-; } && return
+  fi
+  notify-send -a osd -t 1200 -h "string:x-dunst-stack-tag:osd-$1" \
+    -h "int:value:${2%!}" "$3" "$4"
+}
+
+case "${1:-}" in
+  start) start ;;
+  vol)
+    v=${2:?value}; v=${v%\%}
+    if [[ ${3:-} == mute ]]; then send vol "$v!" "Volume" "muted"
+    else send vol "$v" "Volume" "$v%"; fi ;;
+  bright)
+    v=${2:?value}; v=${v%\%}
+    send bright "$v" "Brightness" "$v%" ;;
+  kbd)
+    v=${2:?value}; v=${v%\%}
+    send kbd "$v" "Keyboard backlight" "$v%" ;;
+  kbd-watch) kbd_watch ;;
+  mic)
+    v=${2:?value}; v=${v%\%}
+    if [[ ${3:-} == mute ]]; then send mic "$v!" "Microphone" "muted"
+    else send mic "$v" "Microphone" "on, $v%"; fi ;;
+  *) echo "usage: cyberdeck-osd start | vol <0-100> [mute] | bright <1-100> | mic <0-100> [mute] | kbd <0-100>" >&2; exit 2 ;;
+esac

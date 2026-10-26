@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Docxy
+Comment=Word documents: docx, doc, rtf
+Icon=x-office-document
+Exec=kitty --class cyberdeck-docxy -e docxy
+Terminal=false
+Categories=Office;WordProcessor;

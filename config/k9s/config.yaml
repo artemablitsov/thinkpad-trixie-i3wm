@@ -1,0 +1,10 @@
+# CYBERDECK · k9s (k9s перезаписывает этот файл сам — установщик кладёт его один раз)
+k9s:
+  ui:
+    skin: nord
+    enableMouse: true
+    headless: false
+    logoless: false
+    crumbsless: false
+    reactive: true
+    noIcons: false

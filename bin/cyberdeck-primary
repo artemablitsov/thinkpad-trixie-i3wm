@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# cyberdeck-primary — назначить основной монитор (xrandr --primary): внешний,
+# если подключён, иначе встроенный экран. На основном мониторе — всплывающие
+# окна панели (по центру) и полоска громкости/яркости. Вызывают: i3 при входе
+# и autorandr после смены мониторов.
+q=$(xrandr --query 2>/dev/null) || exit 0
+out=$(awk '/ connected/ && $1 !~ /^(eDP|LVDS|DSI)/ {print $1; exit}' <<<"$q")
+[[ -n $out ]] || out=$(awk '/ connected/ {print $1; exit}' <<<"$q")
+[[ -n $out ]] || exit 0
+grep -q "^$out connected primary" <<<"$q" || xrandr --output "$out" --primary

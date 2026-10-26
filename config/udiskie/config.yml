@@ -1,0 +1,23 @@
+# CYBERDECK · udiskie — флешки и внешние диски монтируются сами
+# (в /media/$USER/<метка>), уведомление — через dunst. Отключить перед
+# извлечением: rofi → «Eject» или `udiskie-umount -a`.
+program_options:
+  automount: true
+  notify: true
+  tray: false
+  # Клик «Открыть» в уведомлении — mc в этой папке
+  file_manager: "kitty --class cyberdeck-mc -e mc"
+  terminal: "kitty --directory"
+
+notifications:
+  timeout: 4
+  device_mounted: 5
+  device_unmounted: 3
+  device_added: false
+  device_removed: false
+  device_unlocked: 3
+  device_locked: false
+  job_failed: -1
+
+notification_actions:
+  device_mounted: [browse]

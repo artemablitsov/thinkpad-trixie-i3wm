@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="t d">
+  <title id="t">Cyberdeck desktop layout</title>
+  <desc id="d">Illustration: polybar at the top, kitty with zsh and Powerlevel10k, the calendar popup floating in the middle of the screen over the terminal, a notification, the volume bar at the bottom — all in Nord colours</desc>
+  <defs>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#3B4252"/>
+    </pattern>
+    <filter id="sh" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <style>
+    text { font-family: 'JetBrains Mono','DejaVu Sans Mono',Menlo,Consolas,monospace; font-size: 13px; }
+    .b { font-weight: 700; }
+    .pre { white-space: pre; }
+  </style>
+
+  <!-- фон -->
+  <rect width="1280" height="720" rx="12" fill="#2E3440"/>
+  <rect width="1280" height="720" rx="12" fill="url(#dots)"/>
+
+  <!-- polybar -->
+  <rect x="0" y="0" width="1280" height="28" fill="#2E3440" fill-opacity="0.7"/>
+  <rect x="0" y="0" width="22" height="28" fill="#88C0D0"/>
+  <text x="7" y="18" fill="#2E3440" class="b">1</text>
+  <text x="29" y="18" fill="#D8DEE9">2</text>
+  <text x="51" y="18" fill="#4C566A">3</text>
+  <rect x="0" y="26" width="22" height="2" fill="#ECEFF4"/>
+  <text x="430" y="18" fill="#D8DEE9">Mon 26.10.2026  <tspan fill="#88C0D0" class="b">12:43</tspan></text>
+  <text x="760" y="18" fill="#81A1C1">wifi</text>
+  <text x="796" y="18" fill="#D8DEE9">Home</text>
+  <text x="846" y="18" fill="#81A1C1">bt</text>
+  <text x="868" y="18" fill="#D8DEE9">---</text>
+  <text x="904" y="18" fill="#81A1C1">VOL:</text>
+  <text x="942" y="18" fill="#D8DEE9">45%</text>
+  <text x="980" y="18" fill="#81A1C1">CPU/RAM:</text>
+  <text x="1052" y="18" fill="#D8DEE9">4%/37%</text>
+  <text x="1110" y="18" fill="#D8DEE9">48°</text>
+  <text x="1144" y="18" fill="#88C0D0">EN</text>
+  <text x="1170" y="18" fill="#D8DEE9">87% <tspan fill="#EBCB8B">balanced</tspan></text>
+
+  <!-- kitty: zsh + powerlevel10k -->
+  <rect x="1" y="29" width="1278" height="690" fill="#2E3440" stroke="#4C566A" stroke-width="2"/>
+  <rect x="2" y="30" width="1276" height="22" fill="#3B4252"/>
+  <rect x="2" y="30" width="140" height="22" fill="#434C5E"/>
+  <text x="13" y="45" fill="#88C0D0">1: zsh</text>
+  <text x="153" y="45" fill="#4C566A">2: nvim</text>
+
+  <g transform="translate(18,80)">
+    <!-- строка приглашения p10k -->
+    <rect x="0" y="-14" width="160" height="20" fill="#5E81AC"/>
+    <text x="8" y="1" fill="#ECEFF4">~/.cyberdeck</text>
+    <rect x="160" y="-14" width="96" height="20" fill="#A3BE8C"/>
+    <text x="168" y="1" fill="#2E3440">main ✓</text>
+    <text x="268" y="1" fill="#ECEFF4">./tools/test-hardware.sh --here</text>
+
+    <text x="0" y="32" fill="#81A1C1">Model       </text><text x="104" y="32" fill="#D8DEE9">ThinkPad T14s Gen 2a [20XF]</text>
+    <text x="0" y="52" fill="#81A1C1">CPU         </text><text x="104" y="52" fill="#D8DEE9">AMD Ryzen (amd-pstate, amd64-microcode)</text>
+    <text x="0" y="72" fill="#81A1C1">Graphics    </text><text x="104" y="72" fill="#D8DEE9">AMD Radeon (amdgpu, TearFree, VA-API mesa)</text>
+    <text x="0" y="92" fill="#81A1C1">NVIDIA      </text><text x="104" y="92" fill="#D8DEE9">none</text>
+    <text x="0" y="112" fill="#81A1C1">Wi-Fi       </text><text x="104" y="112" fill="#D8DEE9">Intel (firmware-iwlwifi)</text>
+    <text x="0" y="132" fill="#81A1C1">Fingerprint </text><text x="104" y="132" fill="#D8DEE9">yes (fprintd)</text>
+    <text x="0" y="152" fill="#81A1C1">Screen      </text><text x="104" y="152" fill="#D8DEE9">1920x1080 (309×174 mm)</text>
+    <text x="0" y="172" fill="#81A1C1">UI scale    </text><text x="104" y="172" fill="#D8DEE9">100 %  (Xft.dpi 96)</text>
+
+    <rect x="0" y="198" width="160" height="20" fill="#5E81AC"/>
+    <text x="8" y="213" fill="#ECEFF4">~/.cyberdeck</text>
+    <rect x="160" y="198" width="96" height="20" fill="#A3BE8C"/>
+    <text x="168" y="213" fill="#2E3440">main ✓</text>
+    <text x="268" y="213" fill="#ECEFF4">sudo ./install.sh --list | column</text>
+    <text class="pre" x="0" y="244" fill="#D8DEE9">preflight   apt         packages    hardware    locale</text>
+    <text class="pre" x="0" y="264" fill="#D8DEE9">cleanup     theme       apps        devtools    greeter</text>
+    <text class="pre" x="0" y="284" fill="#D8DEE9">grub        power       security    dotfiles    network</text>
+    <rect x="0" y="330" width="160" height="20" fill="#5E81AC"/>
+    <text x="8" y="345" fill="#ECEFF4">~/.cyberdeck</text>
+    <rect x="160" y="330" width="96" height="20" fill="#A3BE8C"/>
+    <text x="168" y="345" fill="#2E3440">main ✓</text>
+    <rect x="268" y="333" width="8" height="15" fill="#D8DEE9"/>
+  </g>
+
+  <!-- всплывающее окно с панели: плавающее, по центру экрана, поверх всего -->
+  <rect x="0" y="28" width="1280" height="692" fill="#000" fill-opacity="0.18"/>
+  <g filter="url(#sh)">
+    <rect x="269" y="149" width="742" height="450" fill="#2E3440" stroke="#88C0D0" stroke-width="2"/>
+  </g>
+  <g transform="translate(293,184)">
+    <text x="0" y="0" fill="#88C0D0" class="b">ikhal</text>
+    <text x="694" y="0" fill="#4C566A" text-anchor="end">click on the clock · click again to close</text>
+    <rect x="0" y="14" width="694" height="1" fill="#434C5E"/>
+    <text x="66" y="46" fill="#81A1C1" text-anchor="end">Mo</text>
+    <text x="94" y="46" fill="#81A1C1" text-anchor="end">Tu</text>
+    <text x="122" y="46" fill="#81A1C1" text-anchor="end">We</text>
+    <text x="150" y="46" fill="#81A1C1" text-anchor="end">Th</text>
+    <text x="178" y="46" fill="#81A1C1" text-anchor="end">Fr</text>
+    <text x="206" y="46" fill="#81A1C1" text-anchor="end">Sa</text>
+    <text x="234" y="46" fill="#81A1C1" text-anchor="end">Su</text>
+    <text x="0" y="72" fill="#D8DEE9">Oct</text>
+    <text x="66" y="72" fill="#4C566A" text-anchor="end">28</text>
+    <text x="94" y="72" fill="#4C566A" text-anchor="end">29</text>
+    <text x="122" y="72" fill="#4C566A" text-anchor="end">30</text>
+    <text x="150" y="72" fill="#D8DEE9" text-anchor="end">1</text>
+    <text x="178" y="72" fill="#D8DEE9" text-anchor="end">2</text>
+    <text x="206" y="72" fill="#D8DEE9" text-anchor="end">3</text>
+    <text x="234" y="72" fill="#D8DEE9" text-anchor="end">4</text>
+    <text x="66" y="98" fill="#D8DEE9" text-anchor="end">5</text>
+    <text x="94" y="98" fill="#D8DEE9" text-anchor="end">6</text>
+    <text x="122" y="98" fill="#D8DEE9" text-anchor="end">7</text>
+    <text x="150" y="98" fill="#D8DEE9" text-anchor="end">8</text>
+    <text x="178" y="98" fill="#D8DEE9" text-anchor="end">9</text>
+    <text x="206" y="98" fill="#D8DEE9" text-anchor="end">10</text>
+    <text x="234" y="98" fill="#D8DEE9" text-anchor="end">11</text>
+    <text x="66" y="124" fill="#D8DEE9" text-anchor="end">12</text>
+    <text x="94" y="124" fill="#D8DEE9" text-anchor="end">13</text>
+    <text x="122" y="124" fill="#D8DEE9" text-anchor="end">14</text>
+    <text x="150" y="124" fill="#D8DEE9" text-anchor="end">15</text>
+    <text x="178" y="124" fill="#D8DEE9" text-anchor="end">16</text>
+    <text x="206" y="124" fill="#D8DEE9" text-anchor="end">17</text>
+    <text x="234" y="124" fill="#D8DEE9" text-anchor="end">18</text>
+    <text x="66" y="150" fill="#D8DEE9" text-anchor="end">19</text>
+    <text x="94" y="150" fill="#D8DEE9" text-anchor="end">20</text>
+    <text x="122" y="150" fill="#D8DEE9" text-anchor="end">21</text>
+    <text x="150" y="150" fill="#D8DEE9" text-anchor="end">22</text>
+    <text x="178" y="150" fill="#D8DEE9" text-anchor="end">23</text>
+    <text x="206" y="150" fill="#D8DEE9" text-anchor="end">24</text>
+    <text x="234" y="150" fill="#D8DEE9" text-anchor="end">25</text>
+    <rect x="44" y="159" width="28" height="23" fill="#88C0D0"/>
+    <text x="58" y="176" fill="#2E3440" class="b" text-anchor="middle">26</text>
+    <text x="94" y="176" fill="#D8DEE9" text-anchor="end">27</text>
+    <text x="122" y="176" fill="#D8DEE9" text-anchor="end">28</text>
+    <text x="150" y="176" fill="#D8DEE9" text-anchor="end">29</text>
+    <text x="178" y="176" fill="#D8DEE9" text-anchor="end">30</text>
+    <text x="206" y="176" fill="#D8DEE9" text-anchor="end">31</text>
+    <text x="0" y="202" fill="#D8DEE9">Nov</text>
+    <text x="234" y="202" fill="#D8DEE9" text-anchor="end">1</text>
+    <text x="66" y="228" fill="#D8DEE9" text-anchor="end">2</text>
+    <text x="94" y="228" fill="#D8DEE9" text-anchor="end">3</text>
+    <text x="122" y="228" fill="#D8DEE9" text-anchor="end">4</text>
+    <text x="150" y="228" fill="#D8DEE9" text-anchor="end">5</text>
+    <text x="178" y="228" fill="#D8DEE9" text-anchor="end">6</text>
+    <text x="206" y="228" fill="#D8DEE9" text-anchor="end">7</text>
+    <text x="234" y="228" fill="#D8DEE9" text-anchor="end">8</text>
+    <rect x="260" y="30" width="1" height="330" fill="#434C5E"/>
+    <text x="284" y="46" fill="#EBCB8B" class="b">Today, Monday 26.10.2026</text>
+    <text class="pre" x="284" y="72" fill="#D8DEE9"><tspan fill="#88C0D0">10:00-10:15</tspan>  Stand-up</text>
+    <text class="pre" x="284" y="98" fill="#D8DEE9"><tspan fill="#88C0D0">14:30-15:30</tspan>  Review</text>
+    <text x="284" y="138" fill="#EBCB8B" class="b">Tomorrow</text>
+    <text class="pre" x="284" y="164" fill="#D8DEE9"><tspan fill="#88C0D0">09:00-10:00</tspan>  Release</text>
+    <text x="284" y="204" fill="#EBCB8B" class="b">Thursday 29.10.2026</text>
+    <text class="pre" x="284" y="230" fill="#D8DEE9"><tspan fill="#88C0D0">all day    </tspan>  Conference</text>
+    <rect x="0" y="372" width="694" height="1" fill="#434C5E"/>
+    <text x="0" y="398" fill="#4C566A">n new · e edit · d delete · / search · t today · q quit</text>
+  </g>
+
+  <!-- уведомление dunst -->
+  <g filter="url(#sh)">
+    <rect x="930" y="36" width="340" height="70" fill="#3B4252" stroke="#88C0D0" stroke-width="2"/>
+  </g>
+  <text x="946" y="62" fill="#ECEFF4" class="b">Wi-Fi connected</text>
+  <text x="946" y="86" fill="#D8DEE9">Home · NetworkManager</text>
+
+  <!-- полоса громкости (xob) -->
+  <rect x="482" y="642" width="324" height="18" fill="#2E3440" fill-opacity="0.9" stroke="#4C566A" stroke-width="2"/>
+  <rect x="486" y="646" width="142" height="10" fill="#88C0D0"/>
+</svg>

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Clipboard: clear
+Comment=Clear the clipboard history
+Icon=edit-clear
+Terminal=false
+Exec=sh -c 'greenclip clear && notify-send -a greenclip "Clipboard" "History cleared"'
+Categories=Utility;

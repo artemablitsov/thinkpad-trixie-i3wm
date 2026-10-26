@@ -1,0 +1,71 @@
+# Cyberdeck — GRUB theme (Nord, minimal)
+title-text: ""
+desktop-image: "background.png"
+desktop-color: "#2E3440"
+terminal-font: "Cyberdeck Mono Regular 16"
+terminal-left: "0"
+terminal-top: "0"
+terminal-width: "100%"
+terminal-height: "100%"
+terminal-border: "0"
+
++ label {
+    top = 22%
+    left = 0
+    width = 100%
+    align = "center"
+    text = "C Y B E R D E C K"
+    font = "Cyberdeck Display Bold 48"
+    color = "#88C0D0"
+}
+
++ label {
+    top = 22%+64
+    left = 0
+    width = 100%
+    align = "center"
+    text = "debian · trixie"
+    font = "Cyberdeck Mono Regular 16"
+    color = "#4C566A"
+}
+
++ boot_menu {
+    left = 32%
+    top = 38%
+    width = 36%
+    height = 40%
+    item_font = "Cyberdeck Mono Regular 20"
+    selected_item_font = "Cyberdeck Mono Regular 20"
+    item_color = "#D8DEE9"
+    selected_item_color = "#2E3440"
+    selected_item_pixmap_style = "select_*.png"
+    menu_pixmap_style = "menu_*.png"
+    item_height = 40
+    item_padding = 14
+    item_spacing = 6
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    scrollbar = false
+}
+
++ label {
+    top = 86%
+    left = 0
+    width = 100%
+    align = "center"
+    id = "__timeout__"
+    text = "booting in %d s"
+    font = "Cyberdeck Mono Regular 16"
+    color = "#4C566A"
+}
+
++ label {
+    top = 100%-32
+    left = 0
+    width = 100%
+    align = "center"
+    text = "↑↓ select   enter boot   e edit   c console"
+    font = "Cyberdeck Mono Regular 16"
+    color = "#4C566A"
+}

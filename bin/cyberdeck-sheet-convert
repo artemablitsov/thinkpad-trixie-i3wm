@@ -1,0 +1,246 @@
+#!/usr/bin/python3 -I
+"""cyberdeck-sheet-convert <файл.xls> <копия.xlsx> — старые таблицы для Xlsxy.
+
+Xlsxy открывает только xlsx/xlsm/csv. «.xls» на практике бывает четырёх видов,
+и формат определяется по содержимому, а не по расширению:
+
+  • настоящий Excel 97–2003 (OLE2, BIFF) и даже Excel 2.x–4.0 → xlrd, все листы;
+  • xlsx, просто названный .xls (ZIP)      → копируется как есть;
+  • HTML-таблица с расширением .xls        → так выгружают банки, 1С, веб-системы
+                                             (числа «1 234,50» и даты «дд.мм.гггг» —
+                                             значениями, кодировка UTF-8 или Windows-1251);
+  • XML Spreadsheet 2003 (SpreadsheetML)   → тоже частая «выгрузка в Excel».
+
+Всё сохраняется в xlsx (openpyxl): листы, числа, даты и логические значения
+остаются значениями, а не текстом. Формулы не переносятся — только результаты.
+"""
+import datetime
+import html.parser
+import os
+import re
+import shutil
+import sys
+import xml.etree.ElementTree as ET
+
+from openpyxl import Workbook
+
+SRC, DST = sys.argv[1], sys.argv[2]
+OLE2 = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
+
+
+def die(msg):
+    print(msg, file=sys.stderr)
+    sys.exit(1)
+
+
+def sheet_title(wb, name, index):
+    # Excel: до 31 символа, без []:*?/\ и уникально
+    name = "".join("_" if c in "[]:*?/\\" else c for c in (name or "")).strip() or f"Sheet{index + 1}"
+    name = name[:31]
+    base, n = name, 2
+    while name in wb.sheetnames:
+        suffix = f" ({n})"
+        name = base[: 31 - len(suffix)] + suffix
+        n += 1
+    return name
+
+
+def new_book():
+    wb = Workbook()
+    wb.remove(wb.active)
+    return wb
+
+
+DATE_RE = re.compile(r"^(\d{1,2})\.(\d{1,2})\.(\d{4})$")
+
+
+def value(text):
+    """Текст ячейки HTML-выгрузки → число, дата «дд.мм.гггг» или сам текст."""
+    n = number(text)
+    if n is not None:
+        return n
+    m = DATE_RE.match(text.strip())
+    if m:
+        try:
+            return datetime.date(int(m[3]), int(m[2]), int(m[1]))
+        except ValueError:
+            pass
+    return text
+
+
+def number(text):
+    """«1 234,50» / «1234.5» / «12%» → число, иначе None (для HTML/XML-выгрузок)."""
+    t = text.replace("\xa0", "").replace(" ", "")
+    if not t or len(t) > 30:
+        return None
+    pct = t.endswith("%")
+    if pct:
+        t = t[:-1]
+    if t.count(",") == 1 and "." not in t:
+        t = t.replace(",", ".")
+    try:
+        v = float(t)
+    except ValueError:
+        return None
+    if pct:
+        v /= 100
+    return int(v) if v.is_integer() and "." not in t and not pct else v
+
+
+# ── Excel 97–2003 ──────────────────────────────────────────────────────
+def from_biff():
+    try:
+        import xlrd
+    except ImportError:
+        die("python3-xlrd is not installed")
+    try:
+        with open(os.devnull, "w") as quiet:  # xlrd пишет отладку в stdout
+            book = xlrd.open_workbook(SRC, on_demand=True, logfile=quiet)
+    except Exception as e:  # повреждённый или зашифрованный файл
+        die(f"Cannot read the XLS file: {e}")
+    wb = new_book()
+    for i in range(book.nsheets):
+        sh = book.sheet_by_index(i)
+        ws = wb.create_sheet(sheet_title(wb, sh.name, i))
+        for r in range(sh.nrows):
+            for c in range(sh.ncols):
+                cell = sh.cell(r, c)
+                t, v = cell.ctype, cell.value
+                if t in (xlrd.XL_CELL_EMPTY, xlrd.XL_CELL_BLANK):
+                    continue
+                if t == xlrd.XL_CELL_DATE:
+                    try:
+                        v = xlrd.xldate.xldate_as_datetime(v, book.datemode)
+                        if v.time() == datetime.time(0):
+                            v = v.date()
+                    except Exception:
+                        pass
+                elif t == xlrd.XL_CELL_BOOLEAN:
+                    v = bool(v)
+                elif t == xlrd.XL_CELL_ERROR:
+                    v = xlrd.error_text_from_code.get(v, "#ERR")
+                elif t == xlrd.XL_CELL_NUMBER and float(v).is_integer():
+                    v = int(v)
+                ws.cell(row=r + 1, column=c + 1, value=v)
+        book.unload_sheet(i)
+    return wb
+
+
+# ── HTML-таблицы ───────────────────────────────────────────────────────
+class Tables(html.parser.HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.tables, self.row, self.cell, self.depth = [], None, None, 0
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "table":
+            self.depth += 1
+            if self.depth == 1:
+                self.tables.append([])
+        elif self.depth == 1 and tag == "tr":
+            self.row = []
+        elif self.depth == 1 and tag in ("td", "th") and self.row is not None:
+            a = dict(attrs)
+            self.cell = {"text": [], "span": int(a.get("colspan") or 1) if str(a.get("colspan") or 1).isdigit() else 1}
+        elif self.cell is not None and tag == "br":
+            self.cell["text"].append("\n")
+
+    def handle_endtag(self, tag):
+        if tag == "table":
+            self.depth = max(0, self.depth - 1)
+        elif self.depth == 1 and tag in ("td", "th") and self.cell is not None:
+            text = " ".join("".join(self.cell["text"]).split(" ")).strip()
+            self.row.append(text)
+            self.row.extend([""] * (min(self.cell["span"], 50) - 1))
+            self.cell = None
+        elif self.depth == 1 and tag == "tr" and self.row is not None:
+            self.tables[-1].append(self.row)
+            self.row = None
+
+    def handle_data(self, data):
+        if self.cell is not None:
+            self.cell["text"].append(data)
+
+
+def from_html(raw):
+    text = None
+    for enc in ("utf-8", "cp1251"):  # выгрузки из 1С и банков бывают в Windows-1251
+        try:
+            text = raw.decode(enc)
+            break
+        except UnicodeDecodeError:
+            pass
+    if text is None:
+        text = raw.decode("utf-8", "replace")
+    p = Tables()
+    p.feed(text)
+    tables = [t for t in p.tables if t]
+    if not tables:
+        die("The .xls file is an HTML page without tables")
+    wb = new_book()
+    for i, rows in enumerate(tables):
+        ws = wb.create_sheet(sheet_title(wb, f"Table{i + 1}", i))
+        for r, row in enumerate(rows, 1):
+            for c, v in enumerate(row, 1):
+                if v != "":
+                    ws.cell(row=r, column=c, value=value(v))
+    return wb
+
+
+# ── XML Spreadsheet 2003 ───────────────────────────────────────────────
+def from_spreadsheetml(raw):
+    ss = "{urn:schemas-microsoft-com:office:spreadsheet}"
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as e:
+        die(f"Cannot read the XML spreadsheet: {e}")
+    wb = new_book()
+    for i, wsx in enumerate(root.iter(ss + "Worksheet")):
+        ws = wb.create_sheet(sheet_title(wb, wsx.get(ss + "Name"), i))
+        r = 0
+        for row in wsx.iter(ss + "Row"):
+            r = int(row.get(ss + "Index") or r + 1)
+            c = 0
+            for cell in row.findall(ss + "Cell"):
+                c = int(cell.get(ss + "Index") or c + 1)
+                data = cell.find(ss + "Data")
+                if data is not None:
+                    v = "".join(data.itertext())
+                    kind = data.get(ss + "Type")
+                    if kind == "Number":
+                        n = number(v)
+                        v = n if n is not None else v
+                    elif kind == "Boolean":
+                        v = v.strip() == "1"
+                    elif kind == "DateTime":
+                        try:
+                            v = datetime.datetime.fromisoformat(v.rstrip("Z"))
+                        except ValueError:
+                            pass
+                    ws.cell(row=r, column=c, value=v)
+                c += int(cell.get(ss + "MergeAcross") or 0)
+    if not wb.sheetnames:
+        die("The XML spreadsheet has no worksheets")
+    return wb
+
+
+with open(SRC, "rb") as f:
+    head = f.read(8)
+    f.seek(0)
+    raw = f.read() if head != OLE2 and not head.startswith(b"PK") else b""
+
+if head == OLE2:
+    book = from_biff()
+elif head.startswith(b"PK"):
+    shutil.copyfile(SRC, DST)  # это xlsx с расширением .xls
+    sys.exit(0)
+else:
+    start = raw.lstrip(b"\xef\xbb\xbf \t\r\n")[:2000].lower()
+    if b"urn:schemas-microsoft-com:office:spreadsheet" in start:
+        book = from_spreadsheetml(raw)
+    elif start.startswith(b"<"):
+        book = from_html(raw)
+    else:
+        # Совсем старые Excel 2.x–4.0 хранят лист без контейнера OLE2 — их тоже читает xlrd
+        book = from_biff()
+book.save(DST)

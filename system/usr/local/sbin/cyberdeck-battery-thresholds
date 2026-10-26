@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Пороги заряда батареи ThinkPad из /etc/cyberdeck/power.conf (если заданы).
+BAT_START_THRESHOLD="" BAT_STOP_THRESHOLD=""
+# shellcheck disable=SC1091
+[[ -r /etc/cyberdeck/power.conf ]] && source /etc/cyberdeck/power.conf
+for b in /sys/class/power_supply/BAT*; do
+  [[ -n "$BAT_STOP_THRESHOLD" && -w $b/charge_control_end_threshold ]] && echo "$BAT_STOP_THRESHOLD" > "$b/charge_control_end_threshold"
+  [[ -n "$BAT_START_THRESHOLD" && -w $b/charge_control_start_threshold ]] && echo "$BAT_START_THRESHOLD" > "$b/charge_control_start_threshold"
+done
+exit 0

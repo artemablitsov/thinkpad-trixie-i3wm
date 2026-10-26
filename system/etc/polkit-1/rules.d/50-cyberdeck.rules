@@ -1,0 +1,11 @@
+// Cyberdeck: активная локальная сессия может запускать cyberdeck-suspend@N.service без пароля.
+polkit.addRule(function (action, subject) {
+    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+        subject.local && subject.active) {
+        var unit = action.lookup("unit");
+        var verb = action.lookup("verb");
+        if (verb == "start" && /^cyberdeck-suspend@[0-9]+\.service$/.test(unit)) {
+            return polkit.Result.YES;
+        }
+    }
+});

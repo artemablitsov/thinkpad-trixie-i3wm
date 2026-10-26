@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# cyberdeck-xsettingsd — xsettingsd с масштабом этой машины (GTK-приложения).
+# К ~/.config/xsettingsd/xsettingsd.conf добавляет:
+#   Xft/DPI — размер шрифтов (96 × масштаб), Gtk/CursorThemeSize — курсор;
+#   при 200 % и больше — Gdk/WindowScalingFactor 2: GTK удваивает и сами окна
+#   (а Gdk/UnscaledDPI не даёт шрифтам удвоиться ещё раз).
+# При 125–175 % GTK умеет масштабировать только шрифты — окна остаются прежними.
+conf="$HOME/.config/xsettingsd/xsettingsd.conf"
+out="${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-xsettingsd.conf"
+s=$(cyberdeck-scale) dpi=$(cyberdeck-scale dpi) cur=$(cyberdeck-scale cursor)
+win=1; (( s >= 200 )) && win=$(( s / 100 ))
+{
+  grep -vE '^(Xft/DPI|Gdk/WindowScalingFactor|Gdk/UnscaledDPI|Gtk/CursorThemeSize)[[:space:]]' "$conf" 2>/dev/null
+  echo "Xft/DPI $(( dpi * 1024 ))"
+  echo "Gdk/WindowScalingFactor $win"
+  echo "Gdk/UnscaledDPI $(( dpi * 1024 / win ))"
+  echo "Gtk/CursorThemeSize $cur"
+} > "$out"
+pkill -u "$UID" -x xsettingsd 2>/dev/null
+exec xsettingsd -c "$out"

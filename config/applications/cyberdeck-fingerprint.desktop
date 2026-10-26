@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Fingerprint
+Comment=Enroll a fingerprint (fprintd)
+Icon=fingerprint-gui
+Exec=kitty --class cyberdeck-popup -e bash -c 'echo "Touch the sensor (power button) several times…"; fprintd-enroll && echo "Done." ; echo; read -r -p "Enter — close" _'
+Terminal=false
+Categories=Settings;Security;

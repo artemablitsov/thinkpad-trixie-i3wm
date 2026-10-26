@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=timg video
+Comment=Video in the terminal
+Icon=video-player
+Exec=kitty --class cyberdeck-timg -e cyberdeck-pick video
+Terminal=false
+Categories=AudioVideo;Video;

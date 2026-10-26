@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Audio (pulsemixer)
+Comment=Sound and devices
+Icon=multimedia-volume-control
+Exec=cyberdeck-popup audio pulsemixer
+Terminal=false
+Categories=Settings;Audio;

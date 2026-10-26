@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# cyberdeck-pick <тип> — выбрать файл через fzf и открыть его (для ярлыков rofi без аргумента).
+kind="${1:?type}"
+case "$kind" in
+  image) re='\.(png|jpe?g|gif|webp|bmp|tiff?|svg|avif|heic)$' ;;
+  video) re='\.(mp4|mkv|webm|avi|mov|m4v|wmv|flv)$' ;;
+  audio) re='\.(mp3|flac|ogg|opus|m4a|wav|aac)$' ;;
+  *) echo "type: image|video|audio"; exit 2 ;;
+esac
+f=$(fd -t f -i -E .cache -E node_modules . "$HOME" 2>/dev/null | grep -iE "$re" \
+    | fzf --prompt "$kind › " --height 100% --layout reverse --border none) || exit 0
+exec cyberdeck-open "$kind" "$f"

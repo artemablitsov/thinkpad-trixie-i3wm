@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=htop
+Comment=Processes
+Icon=utilities-system-monitor
+Exec=cyberdeck-popup htop htop
+Terminal=false
+Categories=System;Monitor;

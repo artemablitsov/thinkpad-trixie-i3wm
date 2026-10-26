@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=i3
+Comment=i3 window manager
+Exec=cyberdeck-xsession
+Type=Application
+DesktopNames=i3

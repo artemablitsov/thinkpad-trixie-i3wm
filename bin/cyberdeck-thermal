@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# cyberdeck-thermal — защита от перегрева (AMD: k10temp Tctl, Intel: coretemp Package).
+#   ≥ 90 °C дольше 30 с  → критическое уведомление и профиль power-saver
+#   ≤ 75 °C дольше 60 с  → возврат прежнего профиля и уведомление
+# Пороги — в /etc/cyberdeck/power.conf (THERMAL_HOT, THERMAL_COOL, …).
+# Читает датчик встроенным read раз в 5 с — без запуска процессов (и без sleep).
+set -u
+THERMAL_HOT=90 THERMAL_COOL=75 THERMAL_HOT_SEC=30 THERMAL_COOL_SEC=60
+# shellcheck disable=SC1091
+[[ -r /etc/cyberdeck/power.conf ]] && source /etc/cyberdeck/power.conf
+
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-thermal.lock"
+flock -n 9 || exit 0
+
+input=""
+for want in k10temp:Tctl zenpower:Tctl coretemp:Package; do
+  for h in /sys/class/hwmon/hwmon*; do
+    n=""; read -r n 2>/dev/null < "$h/name"
+    [[ "$n" == "${want%%:*}" ]] || continue
+    for l in "$h"/temp*_label; do
+      n=""; read -r n 2>/dev/null < "$l"
+      [[ "$n" == "${want#*:}"* ]] && { input=${l%_label}_input; break 3; }
+    done
+    input="$h/temp1_input"; break 2
+  done
+done
+[[ -r "$input" ]] || exit 0
+
+# Пауза без процесса sleep: read с таймаутом из канала, в который никто не пишет
+exec {NAPFD}<> <(:)
+nap() { read -rt "$1" -u "$NAPFD" _; }
+
+hot_since=0 cool_since=0 throttled=0 saved=""
+while nap 5 || true; do
+  t=0; read -r t 2>/dev/null < "$input"; t=$(( t / 1000 ))
+  now=$SECONDS
+  if (( !throttled )); then
+    if (( t >= THERMAL_HOT )); then
+      (( hot_since )) || hot_since=$now
+      if (( now - hot_since >= THERMAL_HOT_SEC )); then
+        saved=$(powerprofilesctl get 2>/dev/null)
+        powerprofilesctl set power-saver 2>/dev/null
+        throttled=1 cool_since=0
+        notify-send -u critical -a thermal -h string:x-dunst-stack-tag:thermal \
+          "Overheating: ${t} °C" "CPU above ${THERMAL_HOT} °C for over ${THERMAL_HOT_SEC} s — switched to the power-saver profile"
+      fi
+    else
+      hot_since=0
+    fi
+  else
+    if (( t <= THERMAL_COOL )); then
+      (( cool_since )) || cool_since=$now
+      if (( now - cool_since >= THERMAL_COOL_SEC )); then
+        [[ -n "$saved" && "$saved" != power-saver ]] && powerprofilesctl set "$saved" 2>/dev/null
+        throttled=0 hot_since=0
+        notify-send -a thermal -h string:x-dunst-stack-tag:thermal \
+          "Temperature back to normal: ${t} °C" "Power profile restored: ${saved:-unchanged}"
+      fi
+    else
+      cool_since=0
+    fi
+  fi
+done

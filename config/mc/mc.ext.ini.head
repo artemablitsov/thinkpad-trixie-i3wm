@@ -1,0 +1,51 @@
+### CYBERDECK: правила ниже имеют приоритет; дальше — системный /etc/mc/mc.ext.ini.
+### Enter/двойной клик — Open, F3 — View.
+### Файлы передаются только через cyberdeck-open: он защищает от имён вида «-…».
+### Обратная косая в Regex — двойная (\\.): mc читает файл через GLib, а для
+### него «\.» — недопустимая escape-последовательность, и правило молча пропускается.
+
+[mc.ext.ini]
+Version=4.0
+
+### ── Документы → Docxy ──────────────────────────────
+[cyberdeck-docx]
+Regex=\\.(docx|doc|rtf)$
+RegexIgnoreCase=true
+Open=cyberdeck-open doc %f
+View=%view{ascii} cyberdeck-open doc-view %f
+
+### ── Таблицы → Xlsxy ────────────────────────────────
+[cyberdeck-sheet]
+Regex=\\.(xlsx|xlsm|xls|csv|tsv)$
+RegexIgnoreCase=true
+Open=cyberdeck-open sheet %f
+View=%view{ascii} cyberdeck-open sheet-view %f
+
+### ── PDF → pdf-tui (в терминале, цвета Nord) ─────────
+[cyberdeck-pdf]
+Regex=\\.pdf$
+RegexIgnoreCase=true
+Open=cyberdeck-open pdf %f
+View=cyberdeck-open pdf %f
+
+### ── Изображения → timg ─────────────────────────────
+[cyberdeck-image]
+Regex=\\.(png|jpe?g|gif|webp|bmp|tiff?|avif|heic|svg|ico)$
+RegexIgnoreCase=true
+Open=cyberdeck-open image %f
+View=cyberdeck-open image %f
+
+### ── Видео → timg в терминале (Enter); mpv в окне (F3) ──
+[cyberdeck-video]
+Regex=\\.(mp4|mkv|webm|avi|mov|m4v|wmv|flv|mpe?g|3gp)$
+RegexIgnoreCase=true
+Open=cyberdeck-open video %f
+View=cyberdeck-open video %f --mpv
+
+### ── Музыка → mpv (без видео, с прогрессом в терминале) ──
+[cyberdeck-audio]
+Regex=\\.(mp3|flac|ogg|oga|opus|m4a|aac|wav|wma|ape)$
+RegexIgnoreCase=true
+Open=cyberdeck-open audio %f
+View=cyberdeck-open audio %f
+

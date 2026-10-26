@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# cyberdeck-suspend <минуты> — сон, затем гибернация через указанное число минут.
+# Задержка передаётся systemd-sleep через runtime drop-in (/run).
+set -eu
+min="${1:?minutes}"
+[[ "$min" =~ ^[0-9]+$ ]] || { echo "bad delay: $min" >&2; exit 1; }
+install -d /run/systemd/sleep.conf.d
+printf '[Sleep]\nHibernateDelaySec=%smin\n' "$min" > /run/systemd/sleep.conf.d/50-cyberdeck-delay.conf
+exec systemctl --no-block suspend-then-hibernate

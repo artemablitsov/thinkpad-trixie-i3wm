@@ -1,0 +1,5 @@
+# Cyberdeck: sudo сохраняет переменные прокси — «sudo apt update» идёт через
+# системный прокси (Hiddify), если он включён. Пакеты apt всё равно проверяются
+# по подписи, прокси их подменить не может.
+Defaults env_keep += "http_proxy https_proxy ftp_proxy all_proxy no_proxy"
+Defaults env_keep += "HTTP_PROXY HTTPS_PROXY FTP_PROXY ALL_PROXY NO_PROXY"

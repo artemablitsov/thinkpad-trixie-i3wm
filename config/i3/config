@@ -1,0 +1,212 @@
+# ┌──────────────────────────────────────────┐
+# │ CYBERDECK · i3                           │
+# └──────────────────────────────────────────┘
+set $mod Mod4
+set $alt Mod1
+set $term kitty
+set $popup cyberdeck-popup
+
+# ── Nord ──────────────────────────────────────
+set $nord0  #2E3440
+set $nord1  #3B4252
+set $nord2  #434C5E
+set $nord3  #4C566A
+set $nord4  #D8DEE9
+set $nord6  #ECEFF4
+set $nord7  #8FBCBB
+set $nord8  #88C0D0
+set $nord11 #BF616A
+
+font pango:JetBrainsMono Nerd Font 10
+
+#                       border   bg       text     indicator child_border
+client.focused          $nord8   $nord8   $nord0   $nord7    $nord8
+client.focused_inactive $nord1   $nord1   $nord4   $nord1    $nord1
+client.unfocused        $nord0   $nord0   $nord3   $nord0    $nord1
+client.urgent           $nord11  $nord11  $nord6   $nord11   $nord11
+client.placeholder      $nord0   $nord0   $nord4   $nord0    $nord0
+client.background       $nord0
+
+# ── Минимализм: тонкие рамки, без заголовков, небольшие отступы ──
+default_border pixel 2
+default_floating_border pixel 2
+hide_edge_borders smart
+gaps inner 6
+gaps outer 0
+smart_gaps on
+focus_follows_mouse no
+mouse_warping none
+floating_modifier $mod
+tiling_drag modifier titlebar
+workspace_auto_back_and_forth yes
+
+# ── Автозапуск ───────────────────────────────
+exec --no-startup-id cyberdeck-xsettingsd
+exec --no-startup-id picom --config ~/.config/picom/picom.conf
+exec --no-startup-id dunst
+exec --no-startup-id cyberdeck-polkit
+exec --no-startup-id feh --no-fehbg --bg-fill ~/.local/share/cyberdeck/wallpaper.png
+# Блокировка по сигналу logind (простой, крышка, Win+Esc). Не xss-lock: тот
+# запирал экран при каждом гашении экрана (xset dpms force off), то есть сразу
+# при закрытии крышки, а не через минуту. Перед сном — хук systemd-sleep.
+exec --no-startup-id cyberdeck-lockd
+# Кнопка питания в сеансе открывает меню питания, а не выключает сразу: блокировка
+# handle-power-key у logind живёт, пока жив X (xprop -spy завершается вместе с ним),
+# так что на экране входа кнопка снова выключает ноутбук.
+exec --no-startup-id systemd-inhibit --what=handle-power-key --mode=block --who=i3 --why="Power button opens the power menu" xprop -spy -root _NET_SUPPORTING_WM_CHECK >/dev/null
+exec --no-startup-id cyberdeck-idle
+exec_always --no-startup-id ~/.config/polybar/launch.sh
+exec --no-startup-id sh -c 'autorandr --change --default horizontal; cyberdeck-primary'
+exec --no-startup-id cyberdeck-thermal
+exec --no-startup-id udiskie
+exec --no-startup-id cyberdeck-proxyd
+exec --no-startup-id cyberdeck-osd start
+# История буфера — в $XDG_RUNTIME_DIR (в памяти): пропадает при выходе и выключении
+exec --no-startup-id sh -c 'mkdir -p "$XDG_RUNTIME_DIR/greenclip" && exec greenclip daemon'
+
+# ── Всплывающие TUI по центру экрана ─────────
+# Всплывающие окна панели — плавающие, ПО ЦЕНТРУ ОСНОВНОГО монитора (xrandr
+# --primary: внешний, если подключён, иначе встроенный), поверх всего; sticky —
+# остаются на месте при смене рабочего стола. С какой бы панели ни кликнули —
+# окно всегда на основном мониторе. Правила применяются по порядку и разбиты на
+# строки нарочно: ошибка в одной (нет основного монитора, i3 не принял ppt) не
+# отменяет остальные — окно в любом случае плавающее и по центру.
+for_window [class="^cyberdeck-popup(-small)?$"] floating enable, sticky enable, border pixel 2, move position center, focus
+for_window [class="^cyberdeck-popup(-small)?$"] move container to output primary, move position center, focus
+for_window [class="^cyberdeck-popup$"] resize set 58 ppt 65 ppt, move position center
+for_window [class="^cyberdeck-popup-small$"] resize set 40 ppt 45 ppt, move position center
+# Новые плавающие окна (всплывающие TUI с панели, диалоги) показываются и поверх
+# полноэкранного окна — видео, браузер в F11, Win+f. По умолчанию i3 («smart»)
+# прячет их за ним, и клик по панели выглядел так, будто ничего не произошло.
+popup_during_fullscreen all
+for_window [window_role="pop-up"]  floating enable, move position center
+for_window [window_role="dialog"]  floating enable, move position center
+for_window [window_type="dialog"]  floating enable, move position center
+for_window [class="^Lxpolkit$"]    floating enable, move position center
+for_window [class="^Polkit-mate-authentication-agent-1$"] floating enable, move position center
+for_window [class="^Yad$|^Zenity$"] floating enable, move position center
+# Flameshot: окна (выделение, настройки) — плавающие, без рамки i3
+for_window [class="^flameshot$"] floating enable, border none
+for_window [class="^app\.hiddify\.com$"] floating enable, border pixel 2, resize set 25 ppt 76 ppt, move position center
+
+# ── Приложения ───────────────────────────────
+bindsym $mod+Return       exec $term
+bindsym $mod+space        exec --no-startup-id rofi -show drun
+bindsym $mod+Shift+d      exec --no-startup-id rofi -show run
+bindsym $mod+Shift+v      exec --no-startup-id rofi -modi "clipboard:greenclip print" -show clipboard -run-command '{cmd}'
+bindsym $mod+period       exec --no-startup-id cyberdeck-emoji
+bindsym $mod+equal        exec --no-startup-id cyberdeck-calc
+bindsym $mod+Tab          exec --no-startup-id rofi -show window
+bindsym $mod+n            exec $term --class cyberdeck-mc -e mc
+bindsym $mod+e            exec $term -e nvim
+bindsym $mod+w            exec --no-startup-id x-www-browser
+bindsym $mod+c            exec --no-startup-id $popup calendar ikhal
+bindsym $mod+Shift+n      exec --no-startup-id $popup network nmtui
+bindsym $mod+Shift+b      exec --no-startup-id $popup bluetooth cyberdeck-bt-tui
+bindsym $mod+Shift+a      exec --no-startup-id $popup audio pulsemixer
+bindsym $mod+Shift+Escape exec --no-startup-id $popup htop htop
+bindsym $mod+Shift+m      exec $term --class cyberdeck-music -e cmus
+
+# ── Окна ─────────────────────────────────────
+bindsym $mod+Shift+q kill
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+bindsym $mod+Left  focus left
+bindsym $mod+Down  focus down
+bindsym $mod+Up    focus up
+bindsym $mod+Right focus right
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+bindsym $mod+Shift+Left  move left
+bindsym $mod+Shift+Down  move down
+bindsym $mod+Shift+Up    move up
+bindsym $mod+Shift+Right move right
+
+bindsym $mod+b split h
+bindsym $mod+v split v
+bindsym $mod+t layout toggle split
+bindsym $mod+s layout stacking
+bindsym $mod+g layout tabbed
+bindsym $mod+f fullscreen toggle
+bindsym $mod+Shift+space floating toggle
+bindsym $mod+Ctrl+space focus mode_toggle
+bindsym $mod+a focus parent
+bindsym $mod+minus scratchpad show
+bindsym $mod+Shift+minus move scratchpad
+
+# ── Рабочие столы ────────────────────────────
+set $ws1 "1"
+set $ws2 "2"
+set $ws3 "3"
+set $ws4 "4"
+set $ws5 "5"
+set $ws6 "6"
+set $ws7 "7"
+set $ws8 "8"
+set $ws9 "9"
+set $ws10 "10"
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
+bindsym $mod+6 workspace number $ws6
+bindsym $mod+7 workspace number $ws7
+bindsym $mod+8 workspace number $ws8
+bindsym $mod+9 workspace number $ws9
+bindsym $mod+0 workspace number $ws10
+bindsym $mod+Shift+1 move container to workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5
+bindsym $mod+Shift+6 move container to workspace number $ws6
+bindsym $mod+Shift+7 move container to workspace number $ws7
+bindsym $mod+Shift+8 move container to workspace number $ws8
+bindsym $mod+Shift+9 move container to workspace number $ws9
+bindsym $mod+Shift+0 move container to workspace number $ws10
+bindsym $mod+bracketleft  workspace prev
+bindsym $mod+bracketright workspace next
+
+# ── Размер ───────────────────────────────────
+mode "resize" {
+    bindsym h resize shrink width 10 px or 5 ppt
+    bindsym j resize grow height 10 px or 5 ppt
+    bindsym k resize shrink height 10 px or 5 ppt
+    bindsym l resize grow width 10 px or 5 ppt
+    bindsym Left  resize shrink width 10 px or 5 ppt
+    bindsym Down  resize grow height 10 px or 5 ppt
+    bindsym Up    resize shrink height 10 px or 5 ppt
+    bindsym Right resize grow width 10 px or 5 ppt
+    bindsym Return mode "default"
+    bindsym Escape mode "default"
+}
+bindsym $mod+r mode "resize"
+
+# ── Сессия ───────────────────────────────────
+bindsym $mod+Escape       exec --no-startup-id loginctl lock-session
+bindsym $mod+Shift+x      exec --no-startup-id loginctl lock-session
+bindsym $mod+Shift+e      exec --no-startup-id cyberdeck-powermenu
+bindsym XF86PowerOff      exec --no-startup-id cyberdeck-powermenu
+bindsym $mod+Shift+c      reload
+bindsym $mod+Shift+r      restart
+
+# ── Клавиши ThinkPad ─────────────────────────
+# Громкость и яркость — с полоской внизу экрана (cyberdeck-osd, xob)
+bindsym XF86AudioRaiseVolume  exec --no-startup-id cyberdeck-volume up
+bindsym XF86AudioLowerVolume  exec --no-startup-id cyberdeck-volume down
+bindsym XF86AudioMute         exec --no-startup-id cyberdeck-volume mute
+bindsym XF86AudioMicMute      exec --no-startup-id cyberdeck-volume mic
+bindsym XF86AudioPlay         exec --no-startup-id playerctl play-pause
+bindsym XF86AudioNext         exec --no-startup-id playerctl next
+bindsym XF86AudioPrev         exec --no-startup-id playerctl previous
+bindsym XF86MonBrightnessUp   exec --no-startup-id cyberdeck-brightness up
+bindsym XF86MonBrightnessDown exec --no-startup-id cyberdeck-brightness down
+bindsym XF86Favorites         exec --no-startup-id rofi -show drun
+bindsym Print                 exec --no-startup-id cyberdeck-screenshot area
+bindsym Shift+Print           exec --no-startup-id cyberdeck-screenshot full
+bindsym Ctrl+Print            exec --no-startup-id cyberdeck-screenshot delay

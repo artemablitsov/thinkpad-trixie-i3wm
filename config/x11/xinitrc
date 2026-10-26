@@ -1,0 +1,3 @@
+#!/bin/sh
+# startx из TTY запускает ту же сессию, что и greeter
+exec cyberdeck-xsession

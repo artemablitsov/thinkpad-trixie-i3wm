@@ -1,0 +1,15 @@
+[Unit]
+Description=Cyberdeck: black screen on shutdown and reboot
+# При выключении юниты останавливаются в обратном порядке. Этот запущен ПОСЛЕ
+# greetd и пользовательских сеансов — значит, остановится РАНЬШЕ них: экран
+# станет чёрным до того, как X завершится и покажет консоль.
+After=greetd.service display-manager.service systemd-user-sessions.service systemd-logind.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/local/sbin/cyberdeck-console blank
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,8 @@
+# CYBERDECK · zprofile
+[[ -r /etc/profile.d/cyberdeck-theme.sh ]] && source /etc/profile.d/cyberdeck-theme.sh
+path=("$HOME/.local/bin" "$HOME/.cargo/bin" "$HOME/go/bin" $path)
+export PATH
+
+# Курсор на TTY выключен ядром ради чёрной загрузки (vt.global_cursor_default=0) —
+# в текстовой консоли включаем его обратно
+[[ "$TERM" == linux ]] && command -v setterm >/dev/null && setterm --cursor on

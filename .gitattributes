@@ -1,0 +1,5 @@
+# Скрипты запускаются в Linux — только LF, даже если репозиторий клонировали в Windows
+* text=auto eol=lf
+*.png binary
+*.svg text eol=lf
+*.patch -text

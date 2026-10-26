@@ -1,0 +1,23 @@
+#!/bin/sh
+# cyberdeck-browser — Яндекс Браузер с паролями в связке ключей (gnome-keyring).
+# Браузеры на Chromium выбирают хранилище по окружению рабочего стола; i3 они
+# не знают и сохраняют пароли в «basic» — зашифрованными общеизвестным ключом,
+# то есть фактически открытым текстом. Флаг явно включает Secret Service.
+#
+# XDG_CURRENT_DESKTOP=GNOME — только для браузера: так Chromium берёт системный
+# прокси из gsettings, куда его пишет Hiddify, и сам переключается, когда прокси
+# включают и выключают (в i3 он смотрел бы только на переменные окружения).
+#
+# Видео — на видеокарте (VA-API: Radeon — mesa-va-drivers, Intel — intel-media/i965),
+# а не на процессоре:
+# YouTube и звонки тратят заметно меньше батареи. Имена флагов менялись между
+# версиями Chromium — передаём и старые (Vaapi*), и новые; неизвестные он
+# пропускает. Проверка: browser://gpu → «Video Decode: Hardware accelerated»,
+# browser://media-internals → у видео «VaapiVideoDecoder»/«VaapiVideoDecodeAccelerator».
+FEATURES=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL,AcceleratedVideoEncoder,VaapiVideoDecoder,VaapiVideoEncoder,VaapiVideoDecodeLinuxGL
+for b in /usr/bin/yandex-browser-stable /usr/bin/yandex-browser; do
+  [ -x "$b" ] && XDG_CURRENT_DESKTOP=GNOME exec "$b" --password-store=gnome-libsecret \
+    --enable-features="$FEATURES" "$@"
+done
+echo "cyberdeck-browser: Yandex Browser is not installed" >&2
+exit 1

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=cmus
+Comment=Music library
+Icon=audio-x-generic
+Exec=kitty --class cyberdeck-music -e cmus
+Terminal=false
+Categories=AudioVideo;Audio;Player;

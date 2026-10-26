@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# TUI для Bluetooth: bluetuith, иначе bluetoothctl.
+rfkill unblock bluetooth 2>/dev/null
+if command -v bluetuith >/dev/null; then exec bluetuith; fi
+echo "bluetuith is not installed — interactive bluetoothctl (help, scan on, pair, connect)"
+exec bluetoothctl

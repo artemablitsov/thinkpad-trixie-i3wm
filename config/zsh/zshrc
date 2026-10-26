@@ -1,0 +1,274 @@
+# ~/.zshrc — CYBERDECK
+# Основа — github.com/sasha-sup/dotfiles (zsh/zshrc): Oh My Zsh + Powerlevel10k + fzf.
+# Цвета переведены в Nord, личные алиасы автора убраны, добавлены команды Cyberdeck.
+# Своё (хосты, IP, пути) — в ~/.zshrc.local, он подключается в конце.
+
+# В текстовой консоли (TTY) нет Nerd-иконок — там простой промпт без Powerlevel10k
+if [[ "$TERM" == linux ]]; then
+  CYBERDECK_TTY=1
+fi
+
+# Мгновенный промпт Powerlevel10k (должен быть в начале)
+if [[ -z $CYBERDECK_TTY && -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# ---------- Oh My Zsh ----------
+export ZSH="$HOME/.oh-my-zsh"
+if [[ -n $CYBERDECK_TTY ]]; then
+  ZSH_THEME="cyberdeck"
+else
+  ZSH_THEME="powerlevel10k/powerlevel10k"
+fi
+DISABLE_AUTO_UPDATE="true"
+
+plugins=(
+    git
+    sudo
+    docker
+    docker-compose
+    kubectl
+    colored-man-pages
+    command-not-found
+    extract
+    uv
+    gh
+    helm
+    zsh-autosuggestions
+    zsh-syntax-highlighting
+)
+
+HIST_STAMPS="yyyy-mm-dd"
+
+# ---------- Быстрый запуск: кэш вместо процессов при каждом старте ----------
+# Вывод «init»-команд (mise, zoxide, direnv, dircolors) и файлы автодополнения
+# (kubectl, docker, gh, helm, uv — через копии плагинов, lib/omz-fastplugins.py)
+# пересоздаются, только если кэша нет, программа обновилась или прошла неделя.
+# Сбросить вручную: rm -rf ~/.oh-my-zsh/cache/{init,completions}
+zmodload -F zsh/stat b:zstat 2>/dev/null
+zmodload zsh/datetime 2>/dev/null
+_cd_young() { # <файл> <зависимость>: есть, не пуст, новее зависимости и моложе недели
+  local -a st
+  [[ -s $1 && $1 -nt $2 ]] && zstat -A st +mtime -- $1 2>/dev/null && (( EPOCHSECONDS - st[1] < 604800 ))
+}
+_cd_fresh() { [[ -n $commands[$1] ]] && _cd_young "$ZSH_CACHE_DIR/completions/_$1" $commands[$1]; }
+_cd_eval() { # <имя> <зависимость> <команда…>: source кэшированного вывода команды
+  local f="$ZSH_CACHE_DIR/init/$1.zsh" dep=$2; shift 2
+  [[ -e $dep ]] || return 1
+  if ! _cd_young $f $dep; then
+    [[ -d ${f:h} ]] || mkdir -p ${f:h}
+    "$@" >| $f.$$ 2>/dev/null && [[ -s $f.$$ ]] && mv -f $f.$$ $f || { rm -f $f.$$; return 1; }
+  fi
+  source $f
+}
+# Автодополнение mise — до compinit (он внутри oh-my-zsh.sh), только если устарело
+ZSH_CACHE_DIR="$ZSH/cache"
+if (( $+commands[mise] )) && ! _cd_fresh mise; then
+  mkdir -p "$ZSH_CACHE_DIR/completions"
+  mise completion zsh >| "$ZSH_CACHE_DIR/completions/_mise.$$" 2>/dev/null \
+    && mv -f "$ZSH_CACHE_DIR/completions/_mise.$$" "$ZSH_CACHE_DIR/completions/_mise" \
+    || rm -f "$ZSH_CACHE_DIR/completions/_mise.$$"
+fi
+
+source $ZSH/oh-my-zsh.sh
+
+# mise (версии Go/Node/Python для проекта, .mise.toml). Первые строки вывода
+# «mise activate» содержат текущий $PATH — их не кэшируем: тот же $PATH
+# скрипт сохраняет сам (__MISE_ORIG_PATH), PATH к инструментам ставит hook-env.
+_cd_mise_init() { $commands[mise] activate zsh | grep -v -E "^export (__MISE_ORIG_PATH|PATH)="; }
+(( $+commands[mise] )) && _cd_eval mise $commands[mise] _cd_mise_init
+# direnv: .envrc в проекте — переменные окружения при входе в папку
+(( $+commands[direnv] )) && _cd_eval direnv $commands[direnv] direnv hook zsh
+
+# ---------- Zsh options ----------
+setopt autocd
+setopt interactivecomments
+setopt magicequalsubst
+setopt nonomatch
+setopt notify
+setopt numericglobsort
+setopt promptsubst
+setopt extended_history
+
+WORDCHARS=${WORDCHARS//\/}
+PROMPT_EOL_MARK=""
+
+# ---------- History ----------
+HISTFILE=~/.zsh_history
+HISTSIZE=50000
+SAVEHIST=50000
+setopt hist_expire_dups_first
+setopt hist_ignore_dups
+setopt hist_ignore_space
+setopt hist_verify
+setopt share_history
+alias history="history 0"
+
+# ---------- Key bindings ----------
+bindkey -e
+bindkey ' ' magic-space
+bindkey '^U' backward-kill-line
+bindkey '^[[3;5~' kill-word
+bindkey '^[[3~' delete-char
+bindkey '^[[1;5C' forward-word
+bindkey '^[[1;5D' backward-word
+bindkey '^[[5~' beginning-of-buffer-or-history
+bindkey '^[[6~' end-of-buffer-or-history
+bindkey '^[[H' beginning-of-line
+bindkey '^[[F' end-of-line
+bindkey '^[[Z' undo
+
+# ---------- Completion tuning ----------
+zstyle ':completion:*:*:*:*:*' menu select
+zstyle ':completion:*' auto-description 'specify: %d'
+zstyle ':completion:*' completer _expand _complete
+zstyle ':completion:*' format '%F{#88C0D0}Completing %d%f'
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+zstyle ':completion:*' rehash true
+zstyle ':completion:*' verbose true
+zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
+
+# ---------- Colors / less ----------
+# ~/.dircolors — тема Nord (nordtheme/dircolors), ставит установщик
+if [ -x /usr/bin/dircolors ]; then
+    # вывод dircolors зависит от $TERM (kitty, консоль) — кэш на каждый свой
+    if [[ -r ~/.dircolors ]]; then _cd_eval "dircolors-$TERM" ~/.dircolors dircolors -b ~/.dircolors
+    else _cd_eval "dircolors-$TERM" /usr/bin/dircolors dircolors -b; fi
+    export LS_COLORS="$LS_COLORS:ow=30;44:"
+    zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+    zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
+fi
+
+# ANSI-цвета терминала = палитра Nord (kitty), поэтому man/less тоже в Nord
+export LESS_TERMCAP_mb=$'\E[1;31m'
+export LESS_TERMCAP_md=$'\E[1;36m'
+export LESS_TERMCAP_me=$'\E[0m'
+export LESS_TERMCAP_so=$'\E[01;30;46m'
+export LESS_TERMCAP_se=$'\E[0m'
+export LESS_TERMCAP_us=$'\E[1;32m'
+export LESS_TERMCAP_ue=$'\E[0m'
+
+# Подсказки автодополнения — nord3
+ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE='fg=#4C566A'
+
+# Подсветка синтаксиса — Nord
+typeset -A ZSH_HIGHLIGHT_STYLES
+ZSH_HIGHLIGHT_STYLES[command]='fg=#88C0D0'
+ZSH_HIGHLIGHT_STYLES[builtin]='fg=#81A1C1'
+ZSH_HIGHLIGHT_STYLES[alias]='fg=#8FBCBB'
+ZSH_HIGHLIGHT_STYLES[function]='fg=#8FBCBB'
+ZSH_HIGHLIGHT_STYLES[unknown-token]='fg=#BF616A'
+ZSH_HIGHLIGHT_STYLES[path]='fg=#D8DEE9,underline'
+ZSH_HIGHLIGHT_STYLES[single-quoted-argument]='fg=#A3BE8C'
+ZSH_HIGHLIGHT_STYLES[double-quoted-argument]='fg=#A3BE8C'
+ZSH_HIGHLIGHT_STYLES[comment]='fg=#4C566A'
+
+# ---------- Aliases ----------
+alias ls='ls --color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+alias diff='diff --color=auto'
+alias ip='ip --color=auto'
+alias la='ls -A'
+alias l='ls -CF'
+alias ll="ls -lah"
+
+alias alias-help='grep "^alias" ~/.zshrc | sed -E "s/^alias\s*([^=]+)=(.*)$/\1: \2/"'
+
+alias update="sudo apt update && sudo apt full-upgrade"
+alias apt="sudo apt"
+alias shutdown="sudo shutdown -P now"
+alias reboot="systemctl reboot"
+
+alias virsh="virsh --connect qemu:///system"
+alias k="kubectl"
+
+# Keep colors on remote hosts that don't know the local terminfo entry
+alias ssh="TERM=xterm-256color ssh"
+
+# ---------- Cyberdeck ----------
+alias v='nvim'
+alias vim='nvim'
+alias m='mc'
+alias cal='ikhal'
+alias wifi='nmtui'
+alias bt='cyberdeck-bt-tui'
+alias vol='pulsemixer'
+alias doc='cyberdeck-open doc'
+alias sheet='cyberdeck-open sheet'
+alias img='cyberdeck-open image'
+alias play='cyberdeck-open audio'
+alias icat='kitten icat'
+alias power='powerprofilesctl'
+alias temps='watch -t -n2 sensors'
+alias bat='batcat'
+alias fd='fdfind'
+alias cyberdeck-update='git -C "$(cat /var/lib/cyberdeck/repo)" pull && sudo "$(cat /var/lib/cyberdeck/repo)/install.sh" --only apps,dotfiles'
+
+# ---------- Environment ----------
+export EDITOR=nvim VISUAL=nvim SUDO_EDITOR=nvim
+export BAT_THEME=Nord
+export MC_SKIN=nord
+export NEWT_COLORS='root=lightgray,default;border=cyan,default;window=lightgray,default;shadow=default,default;title=cyan,default;button=black,cyan;actbutton=black,brightcyan;compactbutton=lightgray,default;checkbox=lightgray,default;actcheckbox=black,cyan;entry=white,black;disentry=gray,default;label=lightgray,default;listbox=lightgray,default;actlistbox=black,cyan;sellistbox=cyan,default;actsellistbox=black,cyan;textbox=lightgray,default;acttextbox=black,cyan;emptyscale=default,black;fullscale=default,cyan;helpline=gray,default;roottext=gray,default'
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$HOME/go/bin:$PATH:/usr/local/go/bin"
+
+# NVM (если стоит) — загружается при первом вызове nvm/node/npm/npx:
+# nvm.sh сам по себе добавляет к запуску каждого терминала 0,3–0,5 с.
+export NVM_DIR="$HOME/.nvm"
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  _cd_nvm() {
+    unfunction nvm node npm npx 2>/dev/null
+    \. "$NVM_DIR/nvm.sh"
+    [[ -s "$NVM_DIR/bash_completion" ]] && \. "$NVM_DIR/bash_completion"
+  }
+  for _c in nvm node npm npx; do
+    eval "$_c() { _cd_nvm; $_c \"\$@\"; }"
+  done
+  unset _c
+fi
+
+# Local bin env
+[ -f "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
+
+
+# ---------- fzf (Ctrl-R история, Ctrl-T файлы, Alt-C каталоги) ----------
+if command -v fzf >/dev/null 2>&1; then
+    export FZF_DEFAULT_COMMAND='fdfind --type f --hidden --exclude .git'
+    export FZF_DEFAULT_OPTS="--color=bg:#2E3440,bg+:#3B4252,fg:#D8DEE9,fg+:#ECEFF4,hl:#88C0D0,hl+:#8FBCBB,border:#4C566A,prompt:#81A1C1,pointer:#88C0D0,marker:#A3BE8C,spinner:#81A1C1,info:#4C566A,header:#88C0D0"
+    if [ -f /usr/share/doc/fzf/examples/key-bindings.zsh ]; then
+        source /usr/share/doc/fzf/examples/key-bindings.zsh
+        [ -f /usr/share/doc/fzf/examples/completion.zsh ] && source /usr/share/doc/fzf/examples/completion.zsh
+    else
+        _cd_eval fzf $commands[fzf] fzf --zsh
+    fi
+fi
+
+# ---------- Powerlevel10k user config ----------
+[[ -n $CYBERDECK_TTY || ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# ---------- Machine-local overrides ----------
+# ---------- Системный прокси (Hiddify → gsettings → cyberdeck-proxyd) ----------
+# Перед каждым приглашением: если файл прокси изменился — применить. Так прокси,
+# включённый или выключенный в Hiddify, действует и в уже открытых терминалах.
+# Проверка — встроенный zstat, без запуска процессов.
+zmodload -F zsh/stat b:zstat 2>/dev/null
+typeset -g _cyberdeck_proxy_mtime=0
+_cyberdeck_proxy() {
+  local f=${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-proxy.env
+  local -a st
+  [[ -r $f ]] && zstat -A st +mtime -- $f 2>/dev/null || return 0
+  (( st[1] == _cyberdeck_proxy_mtime )) && return 0
+  _cyberdeck_proxy_mtime=$st[1]
+  source $f
+}
+autoload -Uz add-zsh-hook
+add-zsh-hook precmd _cyberdeck_proxy
+
+# zoxide: z папка — переход по «частоте», zi — выбор через fzf (подключается последним)
+(( $+commands[zoxide] )) && _cd_eval zoxide $commands[zoxide] zoxide init --cmd z zsh
+
+# ~/.zshrc.local is never committed: host names, internal IPs, per-machine
+# aliases and any other personal data belong there, not in this file.
+[ -f "$HOME/.zshrc.local" ] && source "$HOME/.zshrc.local"

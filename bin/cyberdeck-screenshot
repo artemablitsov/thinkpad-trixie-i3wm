@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# cyberdeck-screenshot area|full|delay — скриншоты (Print, Shift+Print, Ctrl+Print).
+#
+#   area   Print         Flameshot: выделить область → стрелки, текст, размытие,
+#                        маркер, номера; Enter — в буфер и в ~/Pictures/Screenshots,
+#                        Ctrl+S — только в файл, Esc — отмена
+#   full   Shift+Print   весь текущий монитор сразу — в буфер и в файл
+#   delay  Ctrl+Print    то же, что area, через 3 с (успеть открыть меню)
+#
+# Значка в трее нет: Flameshot запускается по клавише и сам закрывается.
+# Без Flameshot — запасной вариант на maim (область или экран, без редактора).
+dir="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Pictures")/Screenshots"
+mkdir -p "$dir"
+mode=${1:-area}
+
+if command -v flameshot >/dev/null; then
+  case "$mode" in
+    full)  exec flameshot screen --clipboard --path "$dir" ;;
+    delay) exec flameshot gui --delay 3000 ;;
+    *)     exec flameshot gui ;;
+  esac
+fi
+
+f="$dir/$(date +%Y-%m-%d_%H-%M-%S).png"
+case "$mode" in
+  full) maim -u "$f" ;;
+  delay) sleep 3; maim -u -s -b 2 -c 0.53,0.75,0.82,0.3 -l "$f" || exit 0 ;;
+  *)    maim -u -s -b 2 -c 0.53,0.75,0.82,0.3 -l "$f" || exit 0 ;;
+esac
+xclip -selection clipboard -t image/png -i "$f"
+notify-send -a screenshot -i "$f" "Screenshot" "$(basename "$f") · copied to clipboard"

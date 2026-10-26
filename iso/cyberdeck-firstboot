@@ -1,0 +1,78 @@
+#!/bin/bash
+# cyberdeck-firstboot — первый запуск системы, установленной с образа Cyberdeck.
+# Запускает ~/.cyberdeck/install.sh для пользователя, созданного установщиком,
+# выводя ход установки на первую консоль, и перезагружает машину. Одноразовая:
+# после попытки служба выключается — и при успехе, и при ошибке (повторять
+# 30-минутную установку на каждой загрузке без сети было бы хуже).
+set -u
+USER_FILE=/etc/cyberdeck-firstboot.user
+LOG=/var/log/cyberdeck-firstboot.log
+user=$(cat "$USER_FILE" 2>/dev/null)
+home=$(getent passwd "$user" | cut -d: -f6)
+repo="$home/.cyberdeck"
+
+exec > >(tee -a "$LOG") 2>&1
+setterm --blank 0 --powersave off 2>/dev/null
+clear
+cat <<'EOF'
+
+   C  Y  B  E  R  D  E  C  K
+
+   First boot: installing i3, the Nord theme and the programs.
+   This takes 20–40 minutes and needs the network. Do not power off.
+
+EOF
+
+finish() { # finish <код>
+  systemctl disable cyberdeck-firstboot.service >/dev/null 2>&1
+  rm -f "$USER_FILE"
+  exit "$1"
+}
+
+if [[ -z $user || ! -x $repo/install.sh ]]; then
+  echo "Cyberdeck: no user or no $repo/install.sh — nothing to do."
+  finish 0
+fi
+
+# Пакеты при установке не запускают свои службы (policy-rc.d → 101), только
+# включают. Иначе тупик: эта служба — часть загрузки (multi-user.target ждёт её),
+# а postinst пакета ждёт запуска своей службы, которая сама стоит в очереди
+# загрузки после неё, — и apt висит на «Setting up power-profiles-daemon» вечно.
+# После установки — перезагрузка, и службы стартуют как обычно. Заодно
+# NetworkManager не перехватывает Wi-Fi посреди установки.
+POLICY=/usr/sbin/policy-rc.d own_policy=0
+if [[ ! -e $POLICY ]]; then
+  printf '#!/bin/sh\n# cyberdeck-firstboot: no service starts during the first-boot installation\nexit 101\n' > "$POLICY"
+  chmod 0755 "$POLICY"; own_policy=1
+fi
+trap '(( own_policy )) && rm -f "$POLICY"' EXIT
+
+# Сеть настроил установщик Debian (ifupdown, в том числе Wi-Fi); ждём до 2 минут
+echo "Waiting for the network…"
+for _ in $(seq 60); do
+  curl -fsS --max-time 5 -o /dev/null https://deb.debian.org/ && break
+  sleep 2
+done
+
+if "$repo/install.sh" --user "$user"; then
+  echo
+  echo "Cyberdeck is installed. Rebooting in 10 seconds…"
+  sleep 10
+  systemctl disable cyberdeck-firstboot.service >/dev/null 2>&1
+  rm -f "$USER_FILE"
+  systemctl reboot
+  exit 0
+fi
+
+cat <<EOF
+
+   Cyberdeck installation did not finish.
+   Log: /var/log/cyberdeck-install.log (and $LOG)
+
+   Log in on this console and run it again — it continues where it can:
+     sudo ~/.cyberdeck/install.sh
+
+   Press Enter to get the login prompt.
+EOF
+read -r -t 600 _ </dev/tty1 || true
+finish 1

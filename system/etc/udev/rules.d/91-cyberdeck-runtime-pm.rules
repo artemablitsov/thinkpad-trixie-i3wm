@@ -1,0 +1,7 @@
+# Cyberdeck: PCI-устройства засыпают в простое (runtime PM) — как
+# «powertop --auto-tune», но постоянно. Wi-Fi, сетевая карта, контроллеры
+# USB, звук, SMBus и прочие мосты в простое отключаются, экономия ~0,5–1 Вт.
+# USB-устройства (мышь, клавиатура, наушники) не трогаем: у части из них после
+# сна бывает задержка первого нажатия или щелчки.
+# Проверить: grep . /sys/bus/pci/devices/*/power/runtime_status
+ACTION=="add|bind", SUBSYSTEM=="pci", TEST=="power/control", ATTR{power/control}="auto"

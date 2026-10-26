@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# cyberdeck-popup <имя> <команда…> — TUI в плавающем окне kitty по центру
+# основного монитора (правила for_window в ~/.config/i3/config).
+# Повторный вызов с тем же именем: если окно сейчас активно — закрывает его
+# (переключатель), если открыто, но не в фокусе — возвращает в центр основного
+# монитора поверх всего и делает активным.
+name="${1:?name}"; shift
+[[ $# -gt 0 ]] || set -- "$name"
+title="cdpop:$name"
+# Окно узнаём по instance из WM_CLASS (--name): заголовок программа в терминале
+# может поменять сама (htop, nmtui), а instance — нет
+inst="cdpop-${name//[^A-Za-z0-9_-]/_}"
+if pid=$(pgrep -u "$(id -u)" -f -- "--title $title( |$)"); then
+  if xprop -id "$(xdotool getactivewindow 2>/dev/null)" WM_CLASS 2>/dev/null | grep -q "\"$inst\""; then
+    kill $pid 2>/dev/null
+  else
+    sel="[instance=\"^${inst}\$\"]"
+    # Основного монитора может не быть (xrandr без --primary) — тогда текущий
+    i3-msg -q "$sel move container to output primary, move position center, focus" 2>/dev/null \
+      || i3-msg -q "$sel move container to workspace current, move position center, focus" \
+      || kill $pid 2>/dev/null
+  fi
+  exit 0
+fi
+exec kitty --class cyberdeck-popup --name "$inst" --title "$title" \
+  -o remember_window_size=no -o confirm_os_window_close=0 \
+  -e "$@"

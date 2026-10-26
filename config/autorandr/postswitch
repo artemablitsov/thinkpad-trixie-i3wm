@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# CYBERDECK · autorandr postswitch — после смены набора мониторов.
+# Внешний монитор (если есть) — основной; панель и обои — заново под новые экраны.
+# Основной монитор: внешний, если есть, иначе встроенный (там — всплывающие окна панели)
+cyberdeck-primary
+~/.config/polybar/launch.sh >/dev/null 2>&1 &
+feh --no-fehbg --bg-fill "$HOME/.local/share/cyberdeck/wallpaper.png" 2>/dev/null
+# Полоска громкости/яркости — по центру нового основного монитора
+cyberdeck-osd start >/dev/null 2>&1
+notify-send -a monitors -h string:x-dunst-stack-tag:monitors -t 2000 \
+  "Displays" "Profile: ${AUTORANDR_CURRENT_PROFILE:-${AUTORANDR_PROFILE:-auto}}"

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Clipboard
+Comment=Clipboard history (greenclip) · Win+Shift+V
+Icon=edit-paste
+Terminal=false
+Exec=rofi -modi "clipboard:greenclip print" -show clipboard -run-command "{cmd}"
+Categories=Utility;

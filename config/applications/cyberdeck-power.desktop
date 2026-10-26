@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Power menu
+Comment=Lock, suspend, power off
+Icon=system-shutdown
+Exec=cyberdeck-powermenu
+Terminal=false
+Categories=System;

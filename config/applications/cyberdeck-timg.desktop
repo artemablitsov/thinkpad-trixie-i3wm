@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=timg
+Comment=View images in the terminal
+Icon=image-viewer
+Exec=kitty --class cyberdeck-timg -e cyberdeck-pick image
+Terminal=false
+Categories=Graphics;Viewer;

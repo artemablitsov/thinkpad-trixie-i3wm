@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="560" viewBox="0 0 1280 560" role="img" aria-labelledby="t d">
+  <title id="t">Panel popups open on the primary monitor</title>
+  <desc id="d">Illustration: a laptop screen and an external primary monitor. A click on the VOL module of the laptop's panel opens pulsemixer floating in the middle of the primary monitor.</desc>
+  <defs>
+    <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#3B4252"/></pattern>
+    <filter id="sh" x="-5%" y="-5%" width="110%" height="120%"><feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/></filter>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#EBCB8B"/></marker>
+  </defs>
+  <style>
+    text { font-family: 'JetBrains Mono','DejaVu Sans Mono',Menlo,Consolas,monospace; font-size: 12px; }
+    .b { font-weight: 700; } .cap { font-size: 14px; }
+  </style>
+  <rect width="1280" height="560" rx="12" fill="#242933"/>
+
+  <!-- ноутбук (eDP) -->
+  <g transform="translate(40,150)">
+    <rect x="-10" y="-10" width="420" height="256" rx="10" fill="#3B4252"/>
+    <rect width="400" height="236" fill="#2E3440"/><rect width="400" height="236" fill="url(#dots)"/>
+    <rect width="400" height="20" fill="#2E3440" fill-opacity="0.85"/>
+    <rect width="16" height="20" fill="#88C0D0"/><text x="5" y="14" fill="#2E3440" class="b">1</text>
+    <text x="150" y="14" fill="#D8DEE9">12:43</text>
+    <rect x="262" y="2" width="70" height="16" rx="3" fill="none" stroke="#EBCB8B" stroke-width="1.5"/>
+    <text x="268" y="14" fill="#81A1C1">VOL:</text><text x="302" y="14" fill="#D8DEE9">45%</text>
+    <text x="350" y="14" fill="#D8DEE9">87%</text>
+    <rect x="16" y="34" width="368" height="186" fill="#2E3440" stroke="#4C566A"/>
+    <text x="28" y="56" fill="#4C566A">~ $ nvim notes.md</text>
+    <path d="M-16 248h432l14 22h-460z" fill="#3B4252"/><rect x="160" y="252" width="80" height="6" rx="3" fill="#2E3440"/>
+    <text x="200" y="320" fill="#D8DEE9" class="cap" text-anchor="middle">eDP · laptop</text>
+    <!-- курсор -->
+    <path d="M292 10l0 14 4-4 3 7 3-1-3-7 5 0z" fill="#ECEFF4" stroke="#2E3440" stroke-width="1"/>
+  </g>
+
+  <!-- внешний монитор (основной) -->
+  <g transform="translate(500,40)">
+    <rect x="-12" y="-12" width="764" height="444" rx="10" fill="#3B4252"/>
+    <rect width="740" height="420" fill="#2E3440"/><rect width="740" height="420" fill="url(#dots)"/>
+    <rect width="740" height="24" fill="#2E3440" fill-opacity="0.85"/>
+    <rect width="18" height="24" fill="#88C0D0"/><text x="5" y="16" fill="#2E3440" class="b">2</text>
+    <text x="330" y="16" fill="#D8DEE9">Mon 26.10  <tspan fill="#88C0D0" class="b">12:43</tspan></text>
+    <text x="560" y="16" fill="#81A1C1">VOL:</text><text x="594" y="16" fill="#D8DEE9">45%</text>
+    <text x="640" y="16" fill="#D8DEE9">87% balanced</text>
+    <rect x="12" y="36" width="716" height="372" fill="#2E3440" stroke="#4C566A"/>
+    <text x="26" y="60" fill="#4C566A">~ $ docker compose up</text>
+    <text x="26" y="80" fill="#4C566A">[+] Running 3/3</text>
+
+    <!-- pulsemixer по центру основного монитора -->
+    <g filter="url(#sh)"><rect x="155" y="92" width="430" height="270" fill="#2E3440" stroke="#88C0D0" stroke-width="2"/></g>
+    <g transform="translate(175,118)">
+      <text x="0" y="0" fill="#88C0D0" class="b">pulsemixer</text>
+      <text x="390" y="0" fill="#4C566A" text-anchor="end">F1 Output  F2 Input  F3 Cards</text>
+      <rect x="0" y="12" width="390" height="1" fill="#434C5E"/>
+      <text x="0" y="40" fill="#ECEFF4" class="b">Speakers</text><text x="390" y="40" fill="#D8DEE9" text-anchor="end">45</text>
+      <rect x="0" y="50" width="390" height="10" fill="#3B4252"/><rect x="0" y="50" width="176" height="10" fill="#88C0D0"/>
+      <text x="0" y="90" fill="#D8DEE9">Headphones (BT)</text><text x="390" y="90" fill="#D8DEE9" text-anchor="end">60</text>
+      <rect x="0" y="100" width="390" height="10" fill="#3B4252"/><rect x="0" y="100" width="234" height="10" fill="#81A1C1"/>
+      <text x="0" y="140" fill="#D8DEE9">Yandex Browser</text><text x="390" y="140" fill="#D8DEE9" text-anchor="end">100</text>
+      <rect x="0" y="150" width="390" height="10" fill="#3B4252"/><rect x="0" y="150" width="390" height="10" fill="#5E81AC"/>
+      <rect x="0" y="198" width="390" height="1" fill="#434C5E"/>
+      <text x="0" y="222" fill="#4C566A">h/l volume · m mute · Enter default · q quit</text>
+    </g>
+    <text x="370" y="455" fill="#D8DEE9" class="cap" text-anchor="middle">HDMI · external, <tspan fill="#EBCB8B" class="b">primary</tspan></text>
+  </g>
+
+  <!-- стрелка от клика к окну -->
+  <path d="M345 152 C 470 120, 560 170, 650 200" fill="none" stroke="#EBCB8B" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arr)"/>
+  <text x="380" y="122" fill="#EBCB8B" class="cap">click</text>
+
+  <text x="40" y="525" fill="#81A1C1" class="cap">Every panel popup opens in the middle of the primary monitor — whichever screen you clicked on.</text>
+</svg>

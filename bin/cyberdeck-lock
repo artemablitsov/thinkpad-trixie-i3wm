@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# CYBERDECK · экран блокировки — единственная точка входа для всех способов
+# заблокировать: хук systemd-sleep перед сном/гибернацией, cyberdeck-lockd по loginctl
+# lock-session (Win+Esc, Win+Shift+X, простой, крышка).
+#
+# Раскладка и логика — из github.com/sasha-sup/dotfiles (scripts/lock.sh),
+# цвета переведены в Nord.
+#
+# Отличия от оригинала:
+#  • Фон — однотонный nord0, без картинки. У автора под текстом «запечена»
+#    тёмная подложка, чтобы текст читался поверх яркой картинки. На однотонном
+#    фоне подложка не нужна, а --color, в отличие от картинки, одинаково
+#    выглядит на любом мониторе (картинку i3lock не масштабирует).
+#  • Перед блокировкой ставим медиа на паузу и прячем уведомления, после — возвращаем.
+set -uo pipefail
+
+pgrep -u "$(id -u)" -x 'i3lock|i3lock-color' >/dev/null && exit 0
+export LC_TIME=C.UTF-8   # English weekday and month names
+
+# Если замок запускает xss-lock (как в прежних версиях Cyberdeck), перед сном он
+# держит «задержку сна» и передаёт её дескриптор
+# (XSS_SLEEP_LOCK_FD): i3lock закрывает его, как только экран заблокирован, —
+# и только тогда система засыпает. Копию дескриптора у этого скрипта тоже надо
+# закрыть, иначе задержка держится до тайм-аута logind, а не до готовности замка.
+# Поэтому i3lock запускается в фоне, а дескриптор закрывается сразу после этого.
+# Пауза медиа и уведомлений — после запуска замка: зависший плеер не должен
+# задерживать блокировку.
+# Всегда --nofork: скрипт ждёт разблокировки и только потом возвращает уведомления
+# (без него i3lock уходил бы в фон, и уведомления включались при запертом экране)
+[[ " $* " == *" --nofork "* || " $* " == *" -n "* ]] || set -- "$@" --nofork
+
+start_lock() {
+  "$@" &
+  lock_pid=$!
+  if [[ ${XSS_SLEEP_LOCK_FD:-} =~ ^[0-9]+$ ]]; then eval "exec ${XSS_SLEEP_LOCK_FD}<&-"; fi
+  dunstctl set-paused true 2>/dev/null
+  timeout 3 playerctl -a pause 2>/dev/null
+  wait "$lock_pid"
+}
+
+# i3lock-color собирается из исходников (не из пакета), и обновление библиотек
+# может его сломать. Тогда — пакетный i3lock: некрасиво, но экран заблокирован,
+# а не «ноутбук уснул и проснулся без пароля».
+if ! command -v i3lock-color >/dev/null 2>&1 || ! i3lock-color --version >/dev/null 2>&1; then
+  echo "cyberdeck-lock: i3lock-color not found — using packaged i3lock" >&2
+  start_lock i3lock "$@" --color=2E3440 --show-failed-attempts
+  rc=$?
+  dunstctl set-paused false 2>/dev/null
+  exit $rc
+fi
+
+FONT="JetBrainsMono Nerd Font"
+# Размеры ниже — для 100 %; на 2.8K/4K растут по масштабу экрана (cyberdeck-scale)
+S=$(cyberdeck-scale 2>/dev/null || echo 100)
+px() { echo $(( ($1 * S + 50) / 100 )); }
+
+# Nord: nord0 2E3440 фон · nord1 3B4252 база полосы · nord3 4C566A приглушённый
+# nord4 D8DEE9 текст · nord6 ECEFF4 часы · nord8 88C0D0 акцент · nord9 81A1C1
+# проверка · nord11 BF616A ошибка · nord13 EBCB8B Caps Lock. Формат — RRGGBBAA.
+#
+# --bar-indicator вместо кольца: одна полоса шириной 420 и толщиной 4 px читается
+# как линия под текстом, а не как виджет посреди экрана. ringver/ringwrong
+# перекрашивают её во время проверки и после неверного пароля. --indicator держит
+# полосу на экране и до первой клавиши.
+#
+# На каждое нажатие i3lock-color «подпрыгивает» полосой цвета --keyhl-color
+# (по умолчанию ярко-зелёный 33db00, при Backspace — --bshl-color, оранжевый).
+# Вместо этого — спокойный отклик в Nord: высота подсветки равна толщине полосы
+# (без скачка), при нажатии полоса светлеет до nord8, при Backspace — до nord3,
+# и через мгновение (при следующей перерисовке) возвращается к nord1.
+# (--ring-color в режиме полосы не используется.)
+#
+# Весь текст расставлен относительно центра индикатора ix:iy. --bar-pos — левый
+# край полосы, отсюда -210 при ширине 420.
+#
+# --keylayout 1: раскладки us,ru — без подсказки пароль, набранный не в той
+# раскладке, выглядит просто «неверным».
+#
+# --pass-*-keys: громкость, яркость и медиаклавиши работают на экране блокировки.
+#
+# --refresh-rate 0.5: замок перерисовывается дважды в секунду (по умолчанию раз в
+# секунду). Пока экран погашен, картинка на него не выводится; когда X сам
+# включает экран от движения мыши, старый кадр (рабочий стол) виден до ближайшей
+# перерисовки — теперь не дольше полусекунды. Открытие крышки cyberdeck-idle
+# обрабатывает отдельно, без старого кадра вовсе.
+#
+# --ignore-empty-password намеренно НЕТ: i3lock обращается к PAM только при
+# отправке пароля. /etc/pam.d/i3lock (→ cyberdeck-auth) сначала проверяет пароль,
+# а если он пустой или неверный — ждёт палец. Так что: пароль + Enter — сразу,
+# пустой Enter — затем палец на сканер.
+start_lock i3lock-color "$@" \
+  --color 2E3440ff \
+  --clock --indicator \
+  --bar-indicator --bar-count 1 --bar-orientation horizontal \
+  --bar-total-width "$(px 420)" --bar-base-width "$(px 4)" --bar-max-height "$(px 4)" \
+  --bar-pos "ix-$(px 210):iy+$(px 120)" --bar-color 3B4252ff \
+  --keyhl-color 88C0D0ff --bshl-color 4C566Aff \
+  --ringver-color 81A1C1ff --ringwrong-color BF616Aff \
+  --time-str "%H:%M" --time-size "$(px 56)" --time-pos "ix:iy-$(px 120)" \
+  --time-color ECEFF4ff --time-font "$FONT" \
+  --date-str "%A, %d %B" --date-size "$(px 20)" --date-pos "ix:iy-$(px 20)" \
+  --date-color 88C0D0ff --date-font "$FONT" \
+  --greeter-text "$(id -un)" --greeter-size "$(px 18)" --greeter-pos "ix:iy+$(px 22)" \
+  --greeter-color D8DEE9ff --greeter-font "$FONT" \
+  --keylayout 1 --layout-size "$(px 17)" --layout-pos "ix:iy+$(px 60)" \
+  --layout-color 4C566Aff --layout-font "$FONT" \
+  --verif-text "verifying…" --verif-size "$(px 16)" --verif-pos "ix:iy+$(px 170)" \
+  --verif-color 81A1C1ff --verif-font "$FONT" \
+  --wrong-text "wrong" --wrong-size "$(px 16)" --wrong-pos "ix:iy+$(px 170)" \
+  --wrong-color BF616Aff --wrong-font "$FONT" \
+  --noinput-text "empty" \
+  --lock-text "" --lockfailed-text "lock failed" \
+  --modif-color EBCB8Bff --modif-size "$(px 15)" --modif-pos "ix:iy+$(px 200)" \
+  --show-failed-attempts \
+  --pass-media-keys --pass-volume-keys --pass-screen-keys \
+  --refresh-rate 0.5
+rc=$?
+
+dunstctl set-paused false 2>/dev/null
+exit $rc

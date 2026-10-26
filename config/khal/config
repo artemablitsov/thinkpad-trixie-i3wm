@@ -1,0 +1,24 @@
+# CYBERDECK · khal (локальный календарь; синхронизация — через vdirsyncer по желанию)
+[calendars]
+  [[personal]]
+    path = ~/.local/share/khal/calendars/personal
+    color = light cyan
+    type = calendar
+
+[locale]
+timeformat = %H:%M
+dateformat = %d.%m
+longdateformat = %d.%m.%Y
+datetimeformat = %d.%m %H:%M
+longdatetimeformat = %d.%m.%Y %H:%M
+firstweekday = 0
+weeknumbers = left
+
+[default]
+default_calendar = personal
+highlight_event_days = True
+timedelta = 7d
+
+[view]
+theme = dark
+frame = color

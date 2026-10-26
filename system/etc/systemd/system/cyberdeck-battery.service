@@ -1,0 +1,10 @@
+[Unit]
+Description=Cyberdeck: ThinkPad battery charge thresholds
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cyberdeck-battery-thresholds
+
+[Install]
+WantedBy=multi-user.target

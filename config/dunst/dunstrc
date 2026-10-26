@@ -1,0 +1,71 @@
+# CYBERDECK · dunst · Nord
+[global]
+    monitor = 0
+    follow = keyboard
+    width = 340
+    height = (0, 160)
+    origin = top-right
+    offset = (10, 36)
+    notification_limit = 5
+    progress_bar = true
+    progress_bar_height = 4
+    progress_bar_frame_width = 0
+    indicate_hidden = yes
+    separator_height = 2
+    separator_color = frame
+    padding = 10
+    horizontal_padding = 12
+    text_icon_padding = 10
+    frame_width = 2
+    frame_color = "#88C0D0"
+    corner_radius = 0
+    gap_size = 6
+    sort = yes
+    font = JetBrainsMono Nerd Font 11
+    line_height = 2
+    markup = full
+    format = "<b>%s</b>\n%b"
+    alignment = left
+    vertical_alignment = center
+    show_age_threshold = 60
+    ellipsize = middle
+    ignore_newline = no
+    stack_duplicates = true
+    hide_duplicate_count = false
+    show_indicators = no
+    enable_recursive_icon_lookup = true
+    icon_theme = Papirus-Dark
+    icon_position = left
+    min_icon_size = 24
+    max_icon_size = 40
+    sticky_history = yes
+    history_length = 30
+    dmenu = /usr/bin/rofi -dmenu -p dunst
+    browser = /usr/bin/xdg-open
+    always_run_script = true
+    title = Dunst
+    class = Dunst
+    mouse_left_click = close_current
+    mouse_middle_click = do_action, close_current
+    mouse_right_click = close_all
+
+[urgency_low]
+    background = "#2E3440"
+    foreground = "#D8DEE9"
+    frame_color = "#4C566A"
+    highlight = "#88C0D0"
+    timeout = 4
+
+[urgency_normal]
+    background = "#2E3440"
+    foreground = "#D8DEE9"
+    frame_color = "#88C0D0"
+    highlight = "#88C0D0"
+    timeout = 6
+
+[urgency_critical]
+    background = "#2E3440"
+    foreground = "#ECEFF4"
+    frame_color = "#BF616A"
+    highlight = "#BF616A"
+    timeout = 0

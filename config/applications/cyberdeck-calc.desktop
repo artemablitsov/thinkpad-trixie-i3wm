@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Calculator
+Comment=Calculator (qalc: units, percentages, currencies) · Win+=
+Icon=accessories-calculator
+Terminal=false
+Exec=cyberdeck-calc
+Categories=Utility;

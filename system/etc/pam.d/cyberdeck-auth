@@ -1,0 +1,16 @@
+#%PAM-1.0
+# Cyberdeck: проверка «сначала пароль, потом палец».
+# Подключается в i3lock, sudo и polkit-1 вместо common-auth. Вход в систему
+# (tuigreet), su и ssh остаются только по паролю — палец туда не попадает.
+#
+#   пароль верный              → сразу пускает, сканер не ждём;
+#   пустой Enter / неверный    → сразу ждём палец (10 с на попытку);
+#   палец не записан / нет      → отказ, как при неверном пароле.
+#   сканера
+#
+# Debian по умолчанию (pam-auth-update, профиль fprintd) ставит палец ПЕРЕД паролем
+# во всех службах — тогда введённый пароль проверяется только после 10 с ожидания
+# сканера. Этот профиль Cyberdeck выключает.
+auth   [success=done default=ignore]  pam_unix.so try_first_pass
+-auth  [success=done default=die]     pam_fprintd.so max-tries=1 timeout=10
+auth   requisite                      pam_deny.so

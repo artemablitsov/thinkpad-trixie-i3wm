@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+# cyberdeck-idle — политика простоя в X-сессии.
+#   Крышка открыта: через 5 мин гасим экран, через 10 — блокировка, через 30 — сон
+#                   (suspend-then-hibernate; гибернация через 3 ч от начала простоя).
+#   Крышка закрыта: гасим экран сразу. Блокировку (1 мин) и сон (15 мин) делает
+#                   системный cyberdeck-lidd — он работает и когда никто не вошёл.
+# Значения: /etc/cyberdeck/power.conf
+set -u
+IDLE_SCREEN_OFF_MIN=5 IDLE_LOCK_MIN=10 IDLE_SLEEP_MIN=30 HIBERNATE_AFTER_MIN=180
+# shellcheck disable=SC1091
+[[ -r /etc/cyberdeck/power.conf ]] && source /etc/cyberdeck/power.conf
+
+# Один экземпляр на дисплей
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-idle${DISPLAY//[^0-9]/}.lock"
+flock -n 9 || exit 0
+
+# Встроенный X screensaver/DPMS-таймеры отключаем — всем управляем сами
+xset s off s noblank
+xset +dpms
+xset dpms 0 0 0
+
+lid_closed() {   # без запуска grep — читаем файл встроенным read
+  local f _ st
+  for f in /proc/acpi/button/lid/*/state; do
+    [[ -r $f ]] || continue
+    read -r _ st < "$f" && [[ $st == closed ]] && return 0
+  done
+  return 1
+}
+
+# Крышка закрыта, но подключён внешний монитор («док») — работаем как с открытой
+docked() {
+  [[ "$(busctl get-property org.freedesktop.login1 /org/freedesktop/login1 \
+        org.freedesktop.login1.Manager Docked 2>/dev/null)" == "b true" ]]
+}
+
+# Пауза без процесса sleep: read с таймаутом из канала, в который никто не пишет
+exec {NAPFD}<> <(:)
+nap() { read -rt "$1" -u "$NAPFD" _; }
+
+OFF_S=$(( IDLE_SCREEN_OFF_MIN*60 )) LOCK_S=$(( IDLE_LOCK_MIN*60 )) SLEEP_S=$(( IDLE_SLEEP_MIN*60 ))
+off=0 locked=0 slept=0 lid_was_closed=0 lid_closed_now=0 dock=0 dock_at=0
+next_check=0 prev_idle=0 prev_check=$SECONDS
+
+# Раз в 3 с (при закрытой крышке — раз в секунду, чтобы экран включался сразу
+# при открытии) проверяем только крышку (встроенный read, без процессов). Время
+# простоя (xprintidle — процесс) спрашиваем не раньше, чем простой мог бы дойти
+# до ближайшего порога: простой не растёт быстрее часов. За работой это
+# один запрос в несколько минут вместо двадцати в минуту.
+while nap "$(( lid_closed_now ? 1 : 3 ))" || true; do
+  if lid_closed; then
+    # busctl — при закрытии и дальше не чаще раза в 10 с
+    if (( !lid_closed_now || SECONDS - dock_at >= 10 )); then
+      dock=0; docked && dock=1; dock_at=$SECONDS
+    fi
+    lid_closed_now=1
+  else
+    lid_closed_now=0 dock=0
+  fi
+
+  if (( lid_closed_now && !dock )); then
+    if (( !lid_was_closed )); then
+      xset dpms force off
+      lid_was_closed=1
+    fi
+    continue
+  elif (( lid_was_closed )); then
+    lid_was_closed=0
+    # Пока экран погашен, новые кадры на него не выводятся (amdgpu с TearFree
+    # обновляет картинку по кадровой развёртке, а её нет). После включения монитор
+    # показал бы последний кадр до закрытия крышки — рабочий стол, — пока замок не
+    # перерисуется по своему таймеру (1–2 с). Поэтому: экран включается с нулевой
+    # гаммой (чёрным), xrefresh заставляет перерисовать всё, и через пару кадров,
+    # когда на экране уже замок, гамма возвращается.
+    mapfile -t outs < <(xrandr --listactivemonitors 2>/dev/null | awk 'NR > 1 {print $NF}')
+    for o in "${outs[@]}"; do xrandr --output "$o" --brightness 0 2>/dev/null; done
+    xset dpms force on
+    xrefresh -black 2>/dev/null
+    nap 0.15
+    for o in "${outs[@]}"; do xrandr --output "$o" --brightness 1 2>/dev/null; done
+    off=0 locked=0 slept=0 next_check=0
+  fi
+
+  (( SECONDS < next_check )) && continue
+
+  idle=$(( $(xprintidle 2>/dev/null || echo 0) / 1000 ))
+  # Простой меньше, чем был бы без касаний с прошлой проверки, — человек
+  # возвращался: всё начинается заново
+  if (( idle + 2 < prev_idle + SECONDS - prev_check )); then
+    off=0 locked=0 slept=0
+  fi
+  prev_idle=$idle prev_check=$SECONDS
+
+  if (( !off && idle >= OFF_S )); then
+    xset dpms force off; off=1
+  fi
+  if (( !locked && idle >= LOCK_S )); then
+    loginctl lock-session 2>/dev/null || cyberdeck-lock &
+    locked=1
+  fi
+  if (( !slept && idle >= SLEEP_S )); then
+    delay=$(( HIBERNATE_AFTER_MIN - IDLE_SLEEP_MIN )); (( delay < 1 )) && delay=1
+    systemctl start --no-block "cyberdeck-suspend@${delay}.service"
+    slept=1
+  fi
+
+  # Следующая проверка — когда простой дойдёт до ближайшего несработавшего порога;
+  # если сработали все — раз в 30 с, чтобы заметить возвращение человека
+  wait_s=300; (( off && locked && slept )) && wait_s=30
+  (( !off    && OFF_S   - idle < wait_s )) && wait_s=$(( OFF_S   - idle ))
+  (( !locked && LOCK_S  - idle < wait_s )) && wait_s=$(( LOCK_S  - idle ))
+  (( !slept  && SLEEP_S - idle < wait_s )) && wait_s=$(( SLEEP_S - idle ))
+  (( wait_s < 3 )) && wait_s=3
+  next_check=$(( SECONDS + wait_s ))
+done

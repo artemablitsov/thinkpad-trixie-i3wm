@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# cyberdeck-doc-convert <файл.doc|.rtf> <копия.docx> — старые документы для Docxy.
+#
+# Docxy открывает только docx (и Markdown). Формат определяется по содержимому:
+# «.doc» часто оказывается RTF, HTML (так «сохраняют в Word» веб-системы и 1С)
+# или переименованным docx.
+#
+#   Word 97–2003 (OLE2) → antiword в DocBook (заголовки, списки, таблицы) → pandoc → docx;
+#                         не вышло (старый Word 6/95, необычный файл) — текст через catdoc
+#   docx (ZIP)          → копируется как есть
+#   RTF                 → pandoc
+#   HTML / Word XML     → pandoc
+#
+# antiword по умолчанию выводит Latin-1 — кириллица превращалась бы в «?»;
+# поэтому всегда -m UTF-8.txt (файл соответствия из пакета antiword).
+set -u
+in=${1:?file} out=${2:?out.docx}
+[[ $in == -* ]] && in="./$in"
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+
+magic=$(head -c 8 -- "$in" | od -An -tx1 | tr -d ' \n')
+start=$(head -c 2048 -- "$in" | tr -d '\0' | sed 's/^\xef\xbb\xbf//' | tr -d ' \t\r\n' | head -c 64)
+
+# Простой текст → docx: абзацы через пустую строку, без разметки Markdown
+# (звёздочки и решётки в тексте остаются символами)
+text_to_docx() {
+  awk 'BEGIN { print "<html><body><p>" }
+       { gsub(/&/, "\\&amp;"); gsub(/</, "\\&lt;"); gsub(/>/, "\\&gt;") }
+       /^[ \t\f]*$/ { print "</p><p>"; next }
+       { print $0 "<br>" }
+       END { print "</p></body></html>" }' "$1" > "$tmp/text.html"
+  pandoc -f html -t docx -o "$out" "$tmp/text.html"
+}
+
+case "$magic" in
+  d0cf11e0a1b11ae1)                                   # Word 97–2003
+    if antiword -m UTF-8.txt -x db -- "$in" > "$tmp/doc.xml" 2> "$tmp/err" \
+       && [[ -s $tmp/doc.xml ]] && pandoc -f docbook -t docx -o "$out" "$tmp/doc.xml" 2>/dev/null; then
+      exit 0
+    fi
+    if grep -qi encrypt "$tmp/err" 2>/dev/null; then
+      echo "The document is password-protected" >&2; exit 1
+    fi
+    catdoc -d utf-8 -w -- "$in" > "$tmp/doc.txt" 2>/dev/null && [[ -s $tmp/doc.txt ]] \
+      && text_to_docx "$tmp/doc.txt" && exit 0
+    echo "Cannot read the .doc file: $(head -n1 "$tmp/err" 2>/dev/null)" >&2; exit 1 ;;
+  504b0304*)                                          # docx с другим расширением
+    cp -- "$in" "$out" ;;
+  *)
+    case "$start" in
+      '{\rtf'*) pandoc -f rtf -t docx -o "$out" -- "$in" 2>/dev/null \
+                  || { echo "Cannot convert the RTF file" >&2; exit 1; } ;;
+      '<'*)     pandoc -f html -t docx -o "$out" -- "$in" 2>/dev/null \
+                  || { echo "Cannot convert the HTML document" >&2; exit 1; } ;;
+      *)        # Голый текст с расширением .doc тоже встречается
+                if file -b --mime-type -- "$in" | grep -q '^text/'; then text_to_docx "$in"
+                else echo "Unknown document format: $(file -b -- "$in")" >&2; exit 1; fi ;;
+    esac ;;
+esac

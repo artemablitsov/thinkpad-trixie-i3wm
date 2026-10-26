@@ -1,0 +1,3 @@
+// Cyberdeck: после каждого dpkg убрать глобально доверенные ключи и дубликаты
+// сторонних репозиториев (см. /usr/local/sbin/cyberdeck-apt-guard). Ошибки не мешают apt.
+DPkg::Post-Invoke { "if [ -x /usr/local/sbin/cyberdeck-apt-guard ]; then /usr/local/sbin/cyberdeck-apt-guard || true; fi"; };

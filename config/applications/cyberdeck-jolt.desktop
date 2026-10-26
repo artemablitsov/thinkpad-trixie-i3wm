@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Battery (jolt)
+Comment=Battery and energy monitor: what drains the battery
+Icon=battery
+Exec=cyberdeck-popup battery jolt
+Terminal=false
+Categories=System;Monitor;

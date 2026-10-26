@@ -1,0 +1,13 @@
+# Cyberdeck: pdf-tui. При первом запуске pdf-tui допишет сюда остальные
+# параметры со значениями по умолчанию и комментариями.
+
+[layout]
+# Одна колонка страниц, прокрутка по трети экрана (экран ноутбука 14")
+active = "scroll"
+active_args = ["1", "3"]
+
+[render]
+# Pdfium (бэкенд по умолчанию) в Debian нет — страницы рисует Poppler (pdftoppm).
+# Обёртка cyberdeck-pdf-raster перекрашивает их в цвета Nord.
+pdf_raster_backend = "poppler"
+pdftoppm_bin = "/usr/local/bin/cyberdeck-pdf-raster"

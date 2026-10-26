@@ -1,0 +1,13 @@
+Your own Cyberdeck firewall rules: *.nft files in this directory.
+
+Example — open ssh (file ssh.nft):
+
+    add rule inet cyberdeck allow tcp dport 22 accept
+
+Only from your home network:
+
+    add rule inet cyberdeck allow ip saddr 192.168.1.0/24 tcp dport 22 accept
+
+Apply:      sudo nft -c -f /etc/nftables.conf && sudo systemctl reload nftables
+Inspect:    sudo nft list table inet cyberdeck
+Dropped packets: journalctl -k -g cyberdeck-fw

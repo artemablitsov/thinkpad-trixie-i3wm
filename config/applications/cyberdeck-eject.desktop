@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Eject
+Comment=Safely unmount USB sticks and external drives (udiskie)
+Icon=media-eject
+Terminal=false
+Exec=sh -c 'if udiskie-umount -a; then notify-send -a udiskie "Drives unmounted" "Safe to remove"; else notify-send -u critical -a udiskie "Could not unmount" "The drive is busy — close files and programs using it"; fi'
+Categories=System;

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# cyberdeck-volume up|down|mute|mic [шаг%] — громкость (Fn+F1/F2/F3) и микрофон
+# (Fn+F4) с полоской внизу экрана.
+# Громче — не выше 100 % (pactl +5% пускает и за 100, со звуком «в перегруз»)
+# и заодно снимает «без звука», как на других системах.
+set -u
+step=${2:-5}
+S=@DEFAULT_SINK@
+vol() { pactl get-sink-volume "$S" 2>/dev/null | grep -o '[0-9]*%' | head -n1 | tr -d %; }
+case "${1:-}" in
+  up)
+    pactl set-sink-mute "$S" 0
+    v=$(vol); v=$(( ${v:-0} + step )); (( v > 100 )) && v=100
+    pactl set-sink-volume "$S" "$v%" ;;
+  down) pactl set-sink-volume "$S" "-$step%" ;;
+  mute) pactl set-sink-mute "$S" toggle ;;
+  mic)
+    M=@DEFAULT_SOURCE@
+    pactl set-source-mute "$M" toggle
+    v=$(pactl get-source-volume "$M" 2>/dev/null | grep -o '[0-9]*%' | head -n1 | tr -d %)
+    if [[ "$(pactl get-source-mute "$M" 2>/dev/null)" == *yes* ]]; then
+      cyberdeck-osd mic "${v:-0}" mute
+    else
+      cyberdeck-osd mic "${v:-0}"
+    fi
+    exit 0 ;;
+  *) echo "usage: cyberdeck-volume up|down|mute|mic [step]" >&2; exit 2 ;;
+esac
+v=$(vol)
+if [[ "$(pactl get-sink-mute "$S" 2>/dev/null)" == *yes* ]]; then
+  cyberdeck-osd vol "${v:-0}" mute
+else
+  cyberdeck-osd vol "${v:-0}"
+fi

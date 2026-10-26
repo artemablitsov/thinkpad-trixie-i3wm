@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# cyberdeck-open <тип> <файл> — открыватель для mc (и для ярлыков rofi).
+#   doc   — Docxy  (.docx/.md напрямую; .doc/.rtf — во временный .docx, cyberdeck-doc-convert)
+#   sheet — Xlsxy  (.xlsx/.csv/.tsv напрямую, CSV в Windows-1251 — копией в UTF-8;
+#           .xls — во временный .xlsx)
+#   doc-view   — документ текстом (для F3 в mc)
+#   sheet-view — таблица текстом (для F3 в mc)
+#   image — timg
+#   video — timg (картинка в терминале) или mpv, если запущено с --mpv
+#   audio — mpv без видео (с прогрессом в терминале)
+#   pdf   — pdf-tui: страницы картинками (kitty graphics), в цветах Nord
+#           (перекраску делает cyberdeck-pdf-raster). Без pdf-tui — текст (pdftotext).
+set -u
+kind="${1:?type}"; f="${2:?file}"
+# Имя файла, начинающееся с «-», программы приняли бы за параметр: файл
+# «--include=x.mp3» из скачанного архива заставил бы mpv прочитать чужой конфиг
+# (а через него — скрипт). С «./» впереди это просто имя файла.
+[[ "$f" == -* ]] && f="./$f"
+tmp=""
+cleanup() { [[ -n "$tmp" ]] && rm -rf "$tmp"; }
+trap cleanup EXIT
+pause() { printf '\n\e[2m— press any key —\e[0m'; read -rsn1; }
+ext="${f##*.}"; ext="${ext,,}"
+
+# CSV/TSV из русского Excel сохраняется в Windows-1251 (и с «;»), а Xlsxy читает
+# только UTF-8 и отказывается открыть такой файл. Тогда — копия в UTF-8.
+# Разделитель («,», «;», табуляция) Xlsxy определяет сам.
+utf8_copy() { # utf8_copy <файл> → печатает путь к UTF-8 версии (сам файл или копию)
+  if iconv -f utf-8 -t utf-8 -- "$1" >/dev/null 2>&1; then printf '%s' "$1"; return; fi
+  [[ -n $tmp ]] || tmp=$(mktemp -d)
+  local out; out="$tmp/$(basename -- "$1")"
+  iconv -f cp1251 -t utf-8 -- "$1" > "$out" && printf '%s' "$out"
+}
+
+case "$kind" in
+  doc)
+    case "$ext" in
+      docx|md|markdown) exec docxy "$f" ;;
+      doc|rtf)
+        # Копия в docx (оригинал не меняется); формат — по содержимому, см.
+        # cyberdeck-doc-convert: «.doc» бывает RTF, HTML или переименованным docx
+        tmp=$(mktemp -d); out="$tmp/$(basename "${f%.*}").docx"
+        cyberdeck-doc-convert "$f" "$out" || { pause; exit 1; }
+        docxy "$out" ;;
+      *) exec docxy "$f" ;;
+    esac ;;
+  sheet)
+    case "$ext" in
+      xlsx|xlsm) exec xlsxy "$f" ;;
+      csv|tsv) u=$(utf8_copy "$f") && xlsxy "$u" ;;
+      xls)
+        # Копия в xlsx со всеми листами; «.xls» бывает и HTML/XML-выгрузкой
+        # (банки, 1С) — cyberdeck-sheet-convert определяет формат по содержимому
+        tmp=$(mktemp -d); out="$tmp/$(basename "${f%.*}").xlsx"
+        cyberdeck-sheet-convert "$f" "$out" || { pause; exit 1; }
+        xlsxy "$out" ;;
+      tab)  # Xlsxy узнаёт таблицу по расширению .tsv
+        tmp=$(mktemp -d); u=$(utf8_copy "$f") || exit 1
+        cp -- "$u" "$tmp/$(basename "${f%.*}").tsv" && xlsxy "$tmp/$(basename "${f%.*}").tsv" ;;
+      *) exec xlsxy "$f" ;;
+    esac ;;
+  doc-view)
+    case "$ext" in
+      doc|rtf)
+        tmp=$(mktemp -d)
+        cyberdeck-doc-convert "$f" "$tmp/x.docx" && pandoc -t plain "$tmp/x.docx" ;;
+      *) pandoc -t plain "$f" 2>/dev/null ;;
+    esac ;;
+  sheet-view)
+    # Текстовый просмотр таблицы для F3 в mc: первый лист, до 2000 строк,
+    # столбцы выровнены. CSV разбирается по правилам CSV (кавычки, «;» или «,»).
+    tmp=$(mktemp -d)
+    case "$ext" in
+      csv|tsv|tab) src=$(utf8_copy "$f") || exit 1 ;;
+      xls) cyberdeck-sheet-convert "$f" "$tmp/x.xlsx" && xlsxy "$tmp/x.xlsx" --csv "$tmp/out.csv" >/dev/null 2>&1 || exit 1
+           src="$tmp/out.csv" ;;
+      *)   xlsxy "$f" --csv "$tmp/out.csv" >/dev/null 2>&1 || { echo "Could not read the table"; exit 1; }
+           src="$tmp/out.csv" ;;
+    esac
+    [[ -r $src ]] || { echo "Could not read the table"; exit 1; }
+    python3 -I - "$src" <<'PY'
+import csv, io, sys, unicodedata
+text = open(sys.argv[1], encoding="utf-8", errors="replace", newline="").read()
+try:
+    dialect = csv.Sniffer().sniff(text[:20000], delimiters=",;\t|")
+except csv.Error:
+    dialect = csv.excel
+rows = []
+for i, r in enumerate(csv.reader(io.StringIO(text), dialect)):  # с переводами строк в ячейках
+    if i >= 2000:
+        break
+    rows.append([c.replace("\n", " ") for c in r])
+def w(s):  # ширина в колонках терминала (кириллица — 1, иероглифы — 2)
+    return sum(2 if unicodedata.east_asian_width(ch) in "WF" else 1 for ch in s)
+cols = max((len(r) for r in rows), default=0)
+width = [min(40, max((w(r[c]) for r in rows if c < len(r)), default=0)) for c in range(cols)]
+for r in rows:
+    cells = []
+    for c in range(cols):
+        v = r[c] if c < len(r) else ""
+        if w(v) > 40:
+            v = v[:39] + "…"
+        cells.append(v + " " * (width[c] - w(v)))
+    print(" │ ".join(cells).rstrip())
+PY
+    ;;
+  image)
+    clear; timg --center -pk "$f" 2>/dev/null || timg --center "$f"; pause ;;
+  video)
+    if [[ "${3:-}" == --mpv ]]; then exec mpv "$f"; fi
+    clear; timg --center -pk -V "$f" 2>/dev/null || timg --center -V "$f"; pause ;;
+  audio)
+    clear; printf '\e[36m♪\e[0m %s\n\e[2mspace — pause, ←/→ — seek, q — quit\e[0m\n\n' "$(basename "$f")"
+    exec mpv --no-video --term-osd-bar --msg-level=all=warn,statusline=status "$f" ;;
+  pdf)
+    command -v pdf-tui >/dev/null && exec pdf-tui "$f"
+    pdftotext -layout "$f" - 2>/dev/null | less -R ;;
+  *) echo "Unknown type: $kind" >&2; exit 2 ;;
+esac

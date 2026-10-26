@@ -1,0 +1,61 @@
+# CYBERDECK · git (ссылка в ~/.config/git/config)
+# Машинно-локальное (ключ подписи и т.п.) — в ~/.config/git/local, он подключается в конце.
+# Если есть ~/.gitconfig, его значения важнее этих.
+[user]
+	name = Artem Ablitsov
+	email = artem.ablitsov@gmail.com
+[init]
+	defaultBranch = main
+[core]
+	pager = delta
+	autocrlf = input
+[interactive]
+	diffFilter = delta --color-only
+[delta]
+	navigate = true
+	line-numbers = true
+	syntax-theme = Nord
+	file-style = bold "#88C0D0"
+	file-decoration-style = "#4C566A" ul
+	hunk-header-decoration-style = "#4C566A" box
+	line-numbers-minus-style = "#BF616A"
+	line-numbers-plus-style = "#A3BE8C"
+	line-numbers-zero-style = "#4C566A"
+	minus-style = syntax "#3F2D33"
+	minus-emph-style = syntax "#5C3A42"
+	plus-style = syntax "#2F3B33"
+	plus-emph-style = syntax "#3F5242"
+[diff]
+	algorithm = histogram
+	colorMoved = default
+[merge]
+	conflictStyle = zdiff3
+[pull]
+	rebase = true
+[rebase]
+	autoStash = true
+	autoSquash = true
+	updateRefs = true
+[push]
+	autoSetupRemote = true
+[fetch]
+	prune = true
+[rerere]
+	enabled = true
+[branch]
+	sort = -committerdate
+[tag]
+	sort = version:refname
+[commit]
+	verbose = true
+[help]
+	autocorrect = prompt
+# GitHub по HTTPS — токен из `gh auth login` (хранится в связке ключей)
+[credential "https://github.com"]
+	helper =
+	helper = !/usr/local/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !/usr/local/bin/gh auth git-credential
+[include]
+	path = ~/.config/git/local

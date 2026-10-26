@@ -1,0 +1,18 @@
+#!/bin/sh
+# cyberdeck-scale [dpi|cursor] — масштаб интерфейса этой машины.
+#   без аргумента — проценты (100, 125, 150, 175, 200);  dpi — Xft.dpi;  cursor — размер курсора.
+# Источник — HW_SCALE в /etc/cyberdeck/hardware.conf (install.sh определяет его по
+# экрану: 14" Full HD — 100 %, 2.8K — 150 %, 4K — 200 %). В сессии — переменная CD_SCALE.
+# Поменять: HW_SCALE=… в /etc/cyberdeck/hardware.conf, затем выйти и войти снова.
+s=${CD_SCALE:-}
+if [ -z "$s" ] && [ -r /etc/cyberdeck/hardware.conf ]; then
+  s=$(sed -n 's/^HW_SCALE=//p' /etc/cyberdeck/hardware.conf | tr -dc 0-9)
+fi
+case "$s" in ''|*[!0-9]*) s=100 ;; esac
+[ "$s" -lt 100 ] && s=100
+[ "$s" -gt 300 ] && s=300
+case "${1:-}" in
+  dpi)    echo $(( 96 * s / 100 )) ;;
+  cursor) echo $(( (24 * s + 50) / 100 )) ;;
+  *)      echo "$s" ;;
+esac

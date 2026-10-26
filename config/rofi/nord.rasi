@@ -1,0 +1,79 @@
+/* CYBERDECK · rofi · Nord minimal */
+* {
+    nord0:  #2E3440;
+    nord1:  #3B4252;
+    nord2:  #434C5E;
+    nord3:  #4C566A;
+    nord4:  #D8DEE9;
+    nord6:  #ECEFF4;
+    nord8:  #88C0D0;
+    nord11: #BF616A;
+
+    background-color: transparent;
+    text-color:       @nord4;
+    margin:  0;
+    padding: 0;
+    spacing: 0;
+}
+
+window {
+    location:         center;
+    width:            35em;   /* 560 px при 100 %: em растут вместе со шрифтом (Xft.dpi) */
+    background-color: @nord0;
+    border:           2px;
+    border-color:     @nord8;
+    border-radius:    0;
+}
+
+mainbox {
+    padding:  0.875em;
+    spacing:  0.625em;
+    children: [ inputbar, listview, mode-switcher ];
+}
+
+inputbar {
+    background-color: @nord1;
+    padding:          0.5em 0.625em;
+    spacing:          0.5em;
+    children:         [ prompt, entry ];
+}
+prompt  { text-color: @nord8; }
+entry   { placeholder: "search"; placeholder-color: @nord3; cursor: text; }
+
+listview {
+    lines:        8;
+    columns:      1;
+    fixed-height: true;
+    scrollbar:    false;
+    spacing:      0.125em;
+}
+
+element {
+    padding:  0.4375em 0.625em;
+    spacing:  0.75em;
+    children: [ element-text ];
+}
+element-text { vertical-align: 0.5; highlight: bold #8FBCBB; }
+
+element normal.normal,
+element alternate.normal { background-color: transparent; text-color: @nord4; }
+element selected.normal  { background-color: @nord8; text-color: @nord0; }
+element selected.normal element-text { highlight: bold #2E3440; }
+element normal.urgent,
+element alternate.urgent { text-color: @nord11; }
+element selected.urgent  { background-color: @nord11; text-color: @nord6; }
+element normal.active,
+element alternate.active { text-color: @nord8; }
+element selected.active  { background-color: @nord8; text-color: @nord0; }
+
+element-text { background-color: inherit; text-color: inherit; }
+
+mode-switcher { spacing: 0; }
+button {
+    padding:    0.3125em;
+    text-color: @nord3;
+}
+button selected { text-color: @nord8; }
+
+message  { padding: 0.5em; background-color: @nord1; }
+textbox  { text-color: @nord4; }

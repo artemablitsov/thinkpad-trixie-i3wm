@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# cyberdeck-calc — калькулятор в rofi (Win+=) на qalc (libqalculate).
+#   2^10 · 15% of 2300 · 120 km/h to m/s · 5 GiB to MB · sqrt(2) · 0x1F to dec
+# Выражение + Enter — результат появляется строкой ниже; Enter на результате
+# копирует его в буфер и закрывает окно. Esc — выход.
+set -u
+command -v qalc >/dev/null || { notify-send -a calc "Calculator" "qalc is not installed"; exit 1; }
+
+res="" mesg="qalc · Enter on the result — copy it"
+while :; do
+  expr=$(printf '%s' "$res" | rofi -dmenu -p "=" -mesg "$mesg" -l 1) || exit 0
+  [[ -z "$expr" ]] && exit 0
+  if [[ -n "$res" && "$expr" == "$res" ]]; then
+    printf '%s' "$res" | xclip -selection clipboard
+    notify-send -a calc -t 1500 "Copied" "$res"
+    exit 0
+  fi
+  # Пробел впереди: выражение «-5+3» qalc не примет за параметр
+  res=$(qalc -t " $expr" 2>&1 | tail -n 1)
+  res=${res//$'\e'/}
+  # -mesg — разметка Pango: & < > экранируем
+  mesg="$expr = $res"; mesg=${mesg//&/"&amp;"}; mesg=${mesg//</"&lt;"}; mesg=${mesg//>/"&gt;"}
+done

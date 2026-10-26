@@ -1,0 +1,8 @@
+#!/bin/sh
+# cyberdeck-run КОМАНДА… — запуск программы из rofi с актуальным системным прокси.
+# rofi унаследовал окружение i3 на момент входа; включили прокси в Hiddify позже —
+# переменные http_proxy и т. п. берём из файла, который ведёт cyberdeck-proxyd.
+f="${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-proxy.env"
+# shellcheck disable=SC1090
+[ -r "$f" ] && . "$f"
+exec "$@"

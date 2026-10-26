@@ -1,0 +1,32 @@
+name: Bug report
+description: Something does not install or does not work on your ThinkPad
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware
+      description: Output of `tools/test-hardware.sh --here` (or the contents of /etc/cyberdeck/hardware.conf).
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Installer log
+      description: The end of /var/log/cyberdeck-install.log (and /var/log/cyberdeck-firstboot.log when installed from the image). Remove Wi-Fi names and anything private.
+      render: text
+  - type: dropdown
+    id: how
+    attributes:
+      label: Installed from
+      options:
+        - the Cyberdeck image (make-iso.sh)
+        - install.sh on an existing Debian 13

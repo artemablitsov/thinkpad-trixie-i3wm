@@ -1,0 +1,16 @@
+# Образы и кэш сборки (tools/make-iso.sh, tools/test-vm.sh)
+*.iso
+*.iso.part
+*.qcow2
+*.img
+# Python
+__pycache__/
+*.pyc
+# Редакторы
+*.swp
+*~
+.vscode/
+.idea/
+# Личное — никогда не в репозиторий
+config/zsh/zshrc.local
+*.local

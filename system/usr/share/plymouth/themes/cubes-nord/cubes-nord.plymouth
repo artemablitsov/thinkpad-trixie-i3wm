@@ -1,0 +1,9 @@
+[Plymouth Theme]
+Name=cubes-nord
+Description=Cubes floating in a sphere — recolored to Nord (Cyberdeck)
+Comment=Original: Aditya Shakya (@adi1090x), github.com/adi1090x/plymouth-themes, GPL-3.0
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/cubes-nord
+ScriptFile=/usr/share/plymouth/themes/cubes-nord/cubes-nord.script
