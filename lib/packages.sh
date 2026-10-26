@@ -58,7 +58,7 @@ OPTIONAL=(
 POLKIT_AGENTS=(lxpolkit mate-polkit lxqt-policykit)
 
 # Используются другими модулями
-OTHER=(plymouth plymouth-themes plymouth-label unattended-upgrades nftables locales console-setup keyboard-configuration kbd grub-common btrfs-progs e2fsprogs initramfs-tools cargo rustc i3lock)
+OTHER=(libayatana-appindicator3-1 plymouth plymouth-themes plymouth-label unattended-upgrades nftables locales console-setup keyboard-configuration kbd grub-common btrfs-progs e2fsprogs initramfs-tools cargo rustc i3lock)
 
 # Сборка i3lock-color
 BUILD_DEPS=(autoconf automake pkg-config libx11-dev libpam0g-dev libcairo2-dev libfontconfig1-dev libxcb-composite0-dev

@@ -95,6 +95,18 @@ if ! pkg_installed hiddify || [[ "$(dpkg-query -W -f='${Version}' hiddify 2>/dev
   fi
   rm -rf "$t"
 fi
+# Пакет Hiddify не объявляет всех своих библиотек в Depends: без
+# libayatana-appindicator3 (значок в трее) он не запускается вовсе —
+# «libayatana-appindicator3.so.1: cannot open shared object file».
+if pkg_installed hiddify; then
+  apt_install libayatana-appindicator3-1
+  # Каких библиотек ещё не хватает его программам — сразу видно в журнале
+  missing=$(dpkg -L hiddify 2>/dev/null | while read -r f; do
+              [[ -f $f && -x $f ]] || [[ $f == *.so* && -f $f ]] || continue
+              ldd "$f" 2>/dev/null | awk '/not found/ {print $1}'
+            done | sort -u | xargs)
+  [[ -z $missing ]] || warn "Hiddify still lacks libraries: $missing — install the packages that provide them (apt-file search <name>)"
+fi
 
 # ── Инструменты: релизы с проверкой SHA-256 (lib/versions.sh) ─────────
 # Ставятся в /usr/local/bin; обновление — версия и хеш в versions.sh,
