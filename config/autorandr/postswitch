@@ -1,11 +1,26 @@
 #!/usr/bin/env bash
 # CYBERDECK · autorandr postswitch — после смены набора мониторов.
 # Внешний монитор (если есть) — основной; панель и обои — заново под новые экраны.
-# Основной монитор: внешний, если есть, иначе встроенный (там — всплывающие окна панели)
+#
+# Кто нас запускает. При входе — i3 (внутри сессии пользователя). При подключении
+# монитора и при открытии/закрытии крышки — системная служба autorandr.service
+# (udev → root → «autorandr --batch» запускает этот скрипт от имени пользователя).
+# Во втором случае процесс НЕ входит в сессию logind: всё, что он запустит,
+# polkit считает «неактивной сессией». Так panel, перезапущенная отсюда, теряла
+# право менять профиль питания — клик по профилю молча ничего не делал (а ещё
+# мимо сессии шли уведомления и звук). Поэтому программы сессии запускает сам
+# i3 (i3-msg exec): они получают сессию, окружение и права как при входе.
+in_session() { # in_session <команда> — запустить через i3, а без i3 — напрямую
+  i3-msg -q exec --no-startup-id "$1" 2>/dev/null || sh -c "$1" >/dev/null 2>&1 &
+}
+
+# Основной монитор: внешний, если есть, иначе встроенный (там — всплывающие окна панели).
+# xrandr работает с любым процессом, у которого есть DISPLAY, — сессия не нужна.
 cyberdeck-primary
-~/.config/polybar/launch.sh >/dev/null 2>&1 &
 feh --no-fehbg --bg-fill "$HOME/.local/share/cyberdeck/wallpaper.png" 2>/dev/null
+
+in_session "$HOME/.config/polybar/launch.sh"
 # Полоска громкости/яркости — по центру нового основного монитора
-cyberdeck-osd start >/dev/null 2>&1
-notify-send -a monitors -h string:x-dunst-stack-tag:monitors -t 2000 \
-  "Displays" "Profile: ${AUTORANDR_CURRENT_PROFILE:-${AUTORANDR_PROFILE:-auto}}"
+in_session "cyberdeck-osd start"
+profile=${AUTORANDR_CURRENT_PROFILE:-${AUTORANDR_PROFILE:-auto}}
+in_session "notify-send -a monitors -h string:x-dunst-stack-tag:monitors -t 2000 Displays 'Profile: ${profile//[^A-Za-z0-9_.-]/_}'"

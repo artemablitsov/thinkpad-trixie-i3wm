@@ -48,15 +48,27 @@ case "${1:-}" in
     else rfkill unblock bluetooth; bluetoothctl power on >/dev/null; fi
     refresh; exit 0 ;;
   power-cycle)
-    mapfile -t ps < <(powerprofilesctl list 2>/dev/null | sed -nE 's/^[ *]+([a-z-]+):.*/\1/p')
-    cur=$(powerprofilesctl get 2>/dev/null)
+    # power-saver → balanced → performance → … Ошибку не глотаем: если
+    # переключить не вышло (polkit, демон, «удержание» профиля программой),
+    # уведомление скажет почему.
+    pnote() { notify-send -a power -h string:x-dunst-stack-tag:power "$@"; }
+    if ! cur=$(powerprofilesctl get 2>&1); then
+      pnote -u critical "Power profile" "power-profiles-daemon: ${cur:-not running}"; exit 0
+    fi
+    mapfile -t ps < <(powerprofilesctl list 2>/dev/null | sed -nE 's/^[ *]*([a-z-]+):[[:space:]]*$/\1/p' | tac)
+    (( ${#ps[@]} )) || ps=(power-saver balanced performance)
+    next=${ps[0]}
     for i in "${!ps[@]}"; do
-      if [[ "${ps[$i]}" == "$cur" ]]; then
-        next=${ps[$(( (i + 1) % ${#ps[@]} ))]}
-        powerprofilesctl set "$next" && notify-send -a power -h string:x-dunst-stack-tag:power "Power profile" "$next" -t 1500
-        break
-      fi
+      [[ "${ps[$i]}" == "$cur" ]] && { next=${ps[$(( (i + 1) % ${#ps[@]} ))]}; break; }
     done
+    if ! err=$(powerprofilesctl set "$next" 2>&1); then
+      pnote -u critical "Power profile: $next failed" "${err:-powerprofilesctl set returned an error}"
+    elif got=$(powerprofilesctl get 2>/dev/null); [[ $got != "$next" ]]; then
+      holds=$(powerprofilesctl list-holds 2>/dev/null | grep -E 'ApplicationId|Profile' | tr -s ' ' | paste -sd' ' -)
+      pnote -u critical "Power profile stays $got" "Asked for $next.${holds:+ Held by: $holds}"
+    else
+      pnote -t 1500 "Power profile" "$next"
+    fi
     refresh; exit 0 ;;
   vol-up)   pactl set-sink-volume @DEFAULT_SINK@ +5%; refresh; exit 0 ;;
   vol-down) pactl set-sink-volume @DEFAULT_SINK@ -5%; refresh; exit 0 ;;
