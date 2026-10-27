@@ -37,7 +37,7 @@ Most dotfiles stop at copying configs. Cyberdeck takes a bare Debian — or a bl
 
 ## The panel
 
-Polybar is text, not icons, and every module is a door to a TUI. Whichever monitor's panel you click, the window opens **floating in the middle of the primary monitor** (the external one when it is connected, otherwise the laptop screen), on top of everything — fullscreen video included — and stays there when you switch workspaces. Click the module again to close it.
+Polybar is text, not icons, and every module is a door to a TUI. Whichever monitor's panel you click, the window opens **floating in the middle of the primary monitor** (the external one when it is connected, otherwise the laptop screen), on top of everything — fullscreen video included — and stays there when you switch workspaces. Another click on the module closes it; so does **Esc** wherever the program doesn't need Esc itself (`pulsemixer`, `s-tui`, and `nmtui` from its main screen) — in `htop`, `ikhal`, `bluetuith` and `jolt` Esc cancels searches and closes their dialogs, so there it stays theirs and `q` quits.
 
 <p align="center">
   <img src="docs/assets/monitors.svg" alt="A click on the laptop's panel opens pulsemixer in the middle of the external primary monitor" width="100%">
@@ -54,6 +54,18 @@ Polybar is text, not icons, and every module is a door to a TUI. Whichever monit
 | battery | `jolt` — what drains the battery, battery health | click the profile name — next power profile |
 
 Size: 58 % × 65 % of the monitor, so the same popup fits a 13" Full HD and a 32" 4K screen. More: [docs/desktop.md](docs/desktop.md#polybar-left-to-right).
+
+## Root in burgundy
+
+When you work as root, you see it at once. `mc` and Neovim run as root — `sudo mc`, `sudo nvim`, `su -`, F4 in a root `mc`, `visudo`, `crontab -e`, and `sudoedit` too — switch to **Nord Root**: the same Nord layout with burgundy backgrounds, frames and accents, and a red `ROOT` badge in Neovim's status line.
+
+<p align="center">
+  <img src="docs/assets/root-mc.svg" alt="Midnight Commander: your session in Nord, root in burgundy" width="100%">
+  <img src="docs/assets/root-nvim.svg" alt="Neovim: your session in Nord, root in burgundy with a ROOT badge" width="100%">
+  <br><sub>Rendered cell by cell from the theme files themselves (<code>tools/render-themes.py</code>), not screenshots.</sub>
+</p>
+
+Root gets its own plugin-free Neovim config and its own `mc` settings, owned by root — root never runs files from your home directory. In a text console without 24-bit colour the same idea falls back to 16 colours: red accents instead of cyan. Details: [docs/apps.md](docs/apps.md#root-in-burgundy).
 
 ## Quick start
 
@@ -134,6 +146,7 @@ Why each of these was picked: [docs/choices.md](docs/choices.md).
 | `Win+n` · `Win+e` · `Win+w` | mc · Neovim · browser |
 | `Win+h/j/k/l` (`+Shift`) · `Win+1…0` | focus (move) · workspaces |
 | `Win+Shift+V` · `Win+.` · `Win+=` | clipboard history · emoji · calculator |
+| `Win+Shift+p` | monitors: arrange, rotate, pick the main one — remembered per set of monitors |
 | `Print` | screenshot with annotations |
 | `Win+Esc` · power button | lock · power menu |
 | `Fn+4` | sleep → hibernate after 3 h |
@@ -163,7 +176,7 @@ system/                 system files (copied into /)
 config/                 user configs (symlinked into ~/.config)
 bin/                    cyberdeck-* utilities (→ /usr/local/bin)
 iso/                    preseed, late_command and the first-boot service for the image
-tools/                  check.sh · test-hardware.sh · test-vm.sh · make-iso.sh
+tools/                  check.sh · test-hardware.sh · test-vm.sh · make-iso.sh · render-themes.py
 docs/                   the documentation
 ```
 
@@ -172,6 +185,7 @@ docs/                   the documentation
 - `tools/check.sh` — shellcheck, Python syntax, nftables and apt configs, mc rules, executable bits, hardware detection on sample ThinkPads.
 - `tools/test-hardware.sh` — detection on fake `/sys` of a T14s AMD, T14 Intel 2.8K, P1 Intel + NVIDIA 4K, P53 NVIDIA-only, T14 AMD + Qualcomm, E495 and a VM.
 - `tools/test-vm.sh` — the full installation in QEMU, reboot, and checks of the result.
+- `tools/render-themes.py` — redraws the theme pictures in `docs/assets` from the mc skins and the Neovim colour scheme.
 - GitHub Actions run the checks and the package availability test on every push and weekly; the VM run is manual.
 
 ## Credits

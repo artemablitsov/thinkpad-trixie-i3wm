@@ -53,7 +53,20 @@ as_user() {
 }
 
 # ── apt ────────────────────────────────────────────────────────────────
-apt_update() { apt-get update -qq; }
+# Обновить списки пакетов. Недоступный сторонний репозиторий (pkgs.k8s.io и т. п.)
+# не должен останавливать установку: ещё одна попытка только по IPv4 (сломанный
+# IPv6), а если и она не удалась — предупреждение с адресами недоступных
+# источников, и дальше. Их пакеты не поставятся (это видно по своим сообщениям),
+# остальное — как обычно.
+apt_update() {
+  local out hosts
+  out=$(apt-get update -q 2>&1) && return 0
+  out=$(apt-get update -q -o Acquire::ForceIPv4=true 2>&1) && return 0
+  hosts=$(grep -oE '(Failed to fetch|Cannot initiate the connection to|Could not connect to|Could not resolve) [^ ]+' <<<"$out" \
+            | grep -oE '[a-z]+://[^/ ]+|[a-z0-9.-]+\.[a-z]{2,}(:[0-9]+)?' | sed -E 's#^[a-z]+://##; s#:[0-9]+$##' | sort -u | tr '\n' ' ' || true)
+  warn "apt-get update: not reachable: ${hosts:-see apt-get update} — packages from there are skipped this time"
+  return 0
+}
 
 # ВАЖНО: под set -o pipefail нельзя писать «cmd | grep -q»: grep выходит на первом
 # совпадении, cmd получает SIGPIPE (141) и весь конвейер считается неудачным.
@@ -170,7 +183,13 @@ render() {
 }
 
 # ── загрузки ───────────────────────────────────────────────────────────
-fetch() { curl -fL --retry 3 --connect-timeout 15 -sS -o "$2" "$1"; }
+# Зависшая передача (соединение есть, данных нет — бывает при первой загрузке,
+# пока сеть ещё поднимается, или при сломанном IPv6) обрывается через минуту
+# меньше 1 КБ/с и повторяется; сначала как есть, потом только по IPv4.
+fetch() {
+  local o=(-fL --retry 3 --retry-delay 2 --connect-timeout 15 --speed-limit 1024 --speed-time 60 -sS -o "$2")
+  curl "${o[@]}" "$1" || curl -4 "${o[@]}" "$1"
+}
 
 # Скачать файл и проверить SHA-256. При несовпадении файл удаляется, код 1.
 fetch_verified() { # fetch_verified <url> <sha256> <out>
@@ -189,8 +208,13 @@ git_pinned() {
   [[ "${4:-}" == user ]] && run=(as_user)
   [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { warn "git_pinned: a full SHA is required, got '$sha'"; return 1; }
   local fresh=0; [[ -e "$dir" ]] || fresh=1
+  # Передача, на которой меньше 1 КБ/с дольше минуты, обрывается (без этого git
+  # ждал вечно — установка «висела» на Downloading…); вторая попытка — по IPv4.
+  # timeout — внутри as_user: as_user — функция оболочки, timeout её не запустит
+  local gf=(-c http.lowSpeedLimit=1024 -c http.lowSpeedTime=60)
   "${run[@]}" git init -q "$dir" &&
-    "${run[@]}" git -C "$dir" fetch -q --depth 1 "$url" "$sha" &&
+    { "${run[@]}" timeout 900 git "${gf[@]}" -C "$dir" fetch -q --depth 1 "$url" "$sha" ||
+      "${run[@]}" timeout 900 git "${gf[@]}" -C "$dir" fetch -q --ipv4 --depth 1 "$url" "$sha"; } &&
     "${run[@]}" git -C "$dir" -c advice.detachedHead=false checkout -q FETCH_HEAD &&
     [[ "$("${run[@]}" git -C "$dir" rev-parse HEAD)" == "$sha" ]] || {
       warn "Could not fetch $url @ ${sha:0:12}"

@@ -1,0 +1,15 @@
+#!/bin/sh
+# cyberdeck-bdi-limit MAJ:MIN [байт] — ограничить недописанные данные устройства
+# (по умолчанию 32 МБ) и включить строгий лимит. Вызывает udev для флешек,
+# USB-дисков и SD-карт (61-cyberdeck-removable-writeback.rules).
+bdi=/sys/class/bdi/$1
+bytes=${2:-33554432}
+[ -d "$bdi" ] || exit 0
+# max_bytes есть с ядра 6.2; на старом — то же через долю (1 % от лимита)
+if [ -w "$bdi/max_bytes" ]; then
+  echo "$bytes" > "$bdi/max_bytes"
+else
+  echo 1 > "$bdi/max_ratio" 2>/dev/null
+fi
+[ -w "$bdi/strict_limit" ] && echo 1 > "$bdi/strict_limit"
+exit 0

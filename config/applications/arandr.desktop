@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=ARandR
+Comment=Arrange, rotate and set the resolution of monitors; the layout is remembered (same as Displays)
+Icon=preferences-desktop-display
+Exec=cyberdeck-displays
+Terminal=false
+NoDisplay=true
+Categories=Settings;HardwareSettings;

@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# cyberdeck-screen-watch — следит за раскладкой экранов в X-сессии (i3: событие
+# «output» приходит на любое изменение RandR: поворот, разрешение, монитор
+# включили/выключили, autorandr, arandr).
+#   • обои рисуются заново под новый размер экрана — иначе после поворота
+#     монитора в портрет та часть экрана, которой раньше не было, показывала
+#     растянутую последнюю строку картинки («плывущие» полосы);
+#   • если изменился набор или геометрия мониторов — перезапускаются панели.
+#     Но не пока мониторы погашены по простою (DPMS): уснувший монитор может
+#     «отключиться» от видеокарты, и панели переехали бы на оставшийся.
+#     Проснутся — раскладку вернёт autorandr, и панели перезапустятся тогда.
+#   • монитор выдернули, пока экран был погашен (ноутбук в простое): служба
+#     autorandr тогда раскладку не трогала, и X держал включённым выход, которого
+#     уже нет, — рабочие столы оставались на невидимом экране. Как только экран
+#     включился, раскладка применяется заново (autorandr --change).
+# Запуск: i3 (exec_always), один экземпляр на дисплей.
+set -u
+WP="$HOME/.local/share/cyberdeck/wallpaper.png"
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/cyberdeck-screen-watch${DISPLAY//[^0-9]/}.lock"
+flock -n 9 || exit 0
+
+layout() { xrandr --listactivemonitors 2>/dev/null | tail -n +2; }
+screen_on() { ! xset q 2>/dev/null | grep -qE 'Monitor is (Off|Standby|Suspend)'; }
+wallpaper() { [[ -r $WP ]] && feh --no-fehbg --bg-fill "$WP" 2>/dev/null; }
+
+wallpaper
+last=$(layout) tries=0
+# Панели этого дисплея (у другого X-дисплея — свои)
+my_bars() {
+  local p n=0
+  for p in $(pgrep -u "$UID" -x polybar); do
+    { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx "DISPLAY=$DISPLAY" && n=$((n + 1))
+  done
+  echo $n
+}
+# i3 перезапустили (Win+Shift+r) — подписка рвётся; переподключаемся, пока жив i3.
+# Кроме событий — раз в 30 с проверка, что на каждом мониторе есть панель
+# (панель могла завершиться, когда её монитор пропадал или по ошибке).
+while i3-msg -t get_version >/dev/null 2>&1; do
+  i3-msg -t subscribe -m '[ "output" ]' 2>/dev/null | while :; do
+    if read -r -t 30 _; then
+      ev=1
+      while read -r -t 1 _; do :; done          # события идут пачкой — ждём тишины
+    else
+      (( $? > 128 )) || break                   # не таймаут, а конец — i3 ушёл
+      ev=0
+    fi
+    screen_on || continue
+    # Включённый в X выход без монитора (выдернули во время простоя) — разложить заново
+    if xrandr --query 2>/dev/null | grep -qE ' disconnected [0-9]+x[0-9]+\+[0-9]+\+[0-9]+'; then
+      logger -t cyberdeck-monitors "an output is on but its monitor is gone — re-applying the layout" 2>/dev/null
+      autorandr --change --default horizontal >/dev/null 2>&1
+      continue                                  # смена раскладки пришлёт событие output
+    fi
+    (( ev )) && wallpaper
+    now=$(layout)
+    # мониторов — столько, сколько панелей ставит launch.sh (зеркальные — один)
+    nmon=$(polybar --list-monitors 2>/dev/null | grep -c .)
+    nbar=$(my_bars)
+    if [[ $now != "$last" ]]; then
+      logger -t cyberdeck-monitors "screen layout changed — restarting the panels" 2>/dev/null
+      last=$now tries=0
+      "$HOME/.config/polybar/launch.sh" >/dev/null 2>&1
+    elif (( nbar != nmon )); then
+      # Панель не поднимается раз за разом — не дёргаем остальные каждые 30 с
+      if (( tries < 3 )); then
+        tries=$((tries + 1))
+        logger -t cyberdeck-monitors "$nbar panel(s) for $nmon monitor(s) — restarting the panels" 2>/dev/null
+        "$HOME/.config/polybar/launch.sh" >/dev/null 2>&1
+      elif (( tries == 3 )); then
+        tries=4
+        logger -t cyberdeck-monitors "a panel keeps failing — see ~/.cache/polybar/*.log" 2>/dev/null
+      fi
+    else
+      tries=0
+    fi
+  done
+  sleep 1
+done

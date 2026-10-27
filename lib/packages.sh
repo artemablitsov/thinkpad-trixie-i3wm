@@ -22,7 +22,7 @@ XORG=(
   desktop-file-utils mesa-vulkan-drivers libgl1-mesa-dri mesa-va-drivers
 )
 DESKTOP=(
-  i3-wm picom polybar rofi dunst libnotify-bin feh
+  i3-wm picom polybar rofi dunst libnotify-bin feh arandr
   xprintidle xdotool xclip xsel maim xsettingsd brightnessctl playerctl
   gnome-keyring libpam-gnome-keyring libsecret-tools udiskie qalc flameshot synaptic
   xdg-desktop-portal xdg-desktop-portal-gtk

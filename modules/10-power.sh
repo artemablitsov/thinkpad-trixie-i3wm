@@ -132,11 +132,26 @@ update-initramfs -u -k all >/dev/null
 # больше файлового кэша. page-cluster=0 — zram читается постранично.
 apt_install_optional systemd-zram-generator
 if pkg_installed systemd-zram-generator; then
+  zconf_before=$(sha256sum /etc/systemd/zram-generator.conf 2>/dev/null || true)
   install_sys etc/systemd/zram-generator.conf
   systemctl daemon-reload
-  systemctl restart systemd-zram-setup@zram0.service >/dev/null 2>&1 || true
   printf 'vm.swappiness=100\nvm.page-cluster=0\n' > /etc/sysctl.d/90-cyberdeck.conf
-  out_has zram swapon --show=NAME --noheadings && ok "zram: $(swapon --show=NAME,SIZE --noheadings | awk '/zram/{print $2}') of compressed swap in RAM"
+  # Генератор создаёт две единицы: systemd-zram-setup@zram0 (готовит устройство)
+  # и dev-zram0.swap (включает swap; при загрузке её тянет swap.target). Раньше
+  # перезапускалась только первая: swap не включался до перезагрузки, а на уже
+  # работающей системе перезапуск снимал активный zram (swapoff) и сбрасывал
+  # устройство — отсюда «failed». Теперь: настройки не менялись и zram работает —
+  # не трогаем; иначе — выключить swap, пересоздать устройство, включить swap.
+  if [[ $zconf_before != "$(sha256sum /etc/systemd/zram-generator.conf)" ]] || ! out_has zram swapon --show=NAME --noheadings; then
+    timeout 120 systemctl stop dev-zram0.swap >/dev/null 2>&1 || true
+    timeout 60 systemctl restart systemd-zram-setup@zram0.service >/dev/null 2>&1 || true
+    timeout 60 systemctl start dev-zram0.swap >/dev/null 2>&1 || true
+  fi
+  if out_has zram swapon --show=NAME --noheadings; then
+    ok "zram: $(swapon --show=NAME,SIZE --noheadings | awk '/zram/{print $2}') of compressed swap in RAM"
+  else
+    warn "zram swap is not active yet ($(journalctl -b -u systemd-zram-setup@zram0 -u dev-zram0.swap -n 2 --no-pager -o cat 2>/dev/null | tr '\n' ' ')) — it starts after the reboot; check: swapon --show"
+  fi
 else
   # Без zram — меньше свопинга на диск
   printf 'vm.swappiness=10\n' > /etc/sysctl.d/90-cyberdeck.conf

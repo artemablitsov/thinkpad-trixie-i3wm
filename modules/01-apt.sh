@@ -1,11 +1,27 @@
 # shellcheck shell=bash
 # Репозитории Debian: main contrib non-free non-free-firmware + backports (deb822).
 
-# Сохраняем зеркало, которое выбрали при установке (если оно было).
-mirror=$(grep -rhoE 'https?://[^ ]+/debian/?' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list 2>/dev/null \
+# Зеркало: при первой установке — самое быстрое из /etc/cyberdeck/mirrors.list
+# (cyberdeck-mirror меряет отклик и скорость), дальше — запомненное в
+# /etc/cyberdeck/apt-mirror. Замерить заново и переключить: sudo cyberdeck-mirror
+install -d -m 0755 /etc/cyberdeck
+[[ -f /etc/cyberdeck/mirrors.list ]] || install_sys etc/cyberdeck/mirrors.list
+install_sys usr/local/sbin/cyberdeck-mirror 0755
+current=$(grep -rhoE 'https?://[^ ]+/debian/?' /etc/apt/sources.list /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list 2>/dev/null \
           | grep -v -e security -e debian-security | head -n1 || true)
-mirror="${mirror%/}"
-[[ -n "$mirror" ]] || mirror="http://deb.debian.org/debian"
+current="${current%/}"
+mirror=""
+[[ -s /etc/cyberdeck/apt-mirror ]] && mirror=$(head -n1 /etc/cyberdeck/apt-mirror)
+if [[ -z $mirror ]]; then
+  info "Choosing the fastest Debian mirror (up to a minute)…"
+  # Таблица замеров идёт в лог (stderr), адрес победителя — в переменную
+  if mirror=$(cyberdeck-mirror --pick ${current:+"$current"}); then
+    echo "$mirror" > /etc/cyberdeck/apt-mirror
+  else
+    mirror=${current:-http://deb.debian.org/debian}
+    warn "Could not measure Debian mirrors — keeping $mirror (later: sudo cyberdeck-mirror)"
+  fi
+fi
 info "Mirror: $mirror"
 
 for f in /etc/apt/sources.list /etc/apt/sources.list.d/debian.list; do

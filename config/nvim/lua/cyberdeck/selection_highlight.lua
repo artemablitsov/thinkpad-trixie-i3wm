@@ -5,6 +5,7 @@ local M = {}
 local group = "CyberdeckSelMatch"
 
 local function set_hl()
+  if vim.g.colors_name == "nord-root" then return end   -- у nord-root свой цвет (бордовый)
   vim.api.nvim_set_hl(0, group, { bg = "#434C5E", fg = "#ECEFF4", underline = true, sp = "#88C0D0" })
 end
 

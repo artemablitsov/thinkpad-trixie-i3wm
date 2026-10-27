@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# cyberdeck-mirror — самое быстрое зеркало Debian для этой машины.
+#
+#   sudo cyberdeck-mirror           замерить, показать таблицу и переключить apt на
+#                                   самое быстрое (/etc/apt/sources.list.d/debian.sources)
+#   cyberdeck-mirror --pick [URL…]  замерить и напечатать только адрес победителя
+#                                   (для установщика; URL — дополнительные кандидаты)
+#   cyberdeck-mirror --dry-run      замерить и показать, ничего не меняя
+#
+# Список зеркал: /etc/cyberdeck/mirrors.list (своё зеркало — строкой туда же).
+# Как меряем:
+#   1. все зеркала параллельно: отвечает ли и есть ли на нём trixie (InRelease,
+#      «Codename: trixie»), за сколько; не ответившие за 5 с отбрасываются;
+#   2. шесть самых отзывчивых — по очереди: скорость скачивания первых 8 МБ
+#      большого файла архива (Contents-amd64.gz), не дольше 6 с на зеркало;
+#      у победителя — ещё проверка, что есть trixie-updates и trixie-backports.
+# Пакеты всё равно проверяются по подписи Debian — зеркало их подменить не может.
+set -uo pipefail
+LIST=${CD_MIRRORS_LIST:-/etc/cyberdeck/mirrors.list}
+SOURCES=/etc/apt/sources.list.d/debian.sources
+STATE=/etc/cyberdeck/apt-mirror
+PROBE=dists/trixie/main/Contents-amd64.gz     # десятки МБ, есть на любом полном зеркале
+TOP=6
+
+mode=apply extra=()
+case "${1:-}" in
+  --pick)    mode=pick; shift; extra=("$@") ;;
+  --dry-run) mode=dry ;;
+  -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  "") ;;
+  *) echo "usage: cyberdeck-mirror [--pick [URL…] | --dry-run]" >&2; exit 2 ;;
+esac
+say() { printf '%s\n' "$*" >&2; }
+
+mapfile -t mirrors < <( { grep -vE '^\s*(#|$)' "$LIST" 2>/dev/null; printf '%s\n' "${extra[@]}"; } \
+                         | sed -E 's#/+$##' | awk 'NF && !seen[$0]++')
+(( ${#mirrors[@]} )) || { say "No mirrors in $LIST"; exit 1; }
+
+work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
+
+# ── 1. Отзывчивость и наличие trixie — параллельно ─────────────────────
+say "Checking ${#mirrors[@]} Debian mirrors…"
+i=0
+for m in "${mirrors[@]}"; do
+  ( out=$(curl -fsS --connect-timeout 4 --max-time 5 -w '\n%{time_total}' "$m/dists/trixie/InRelease" 2>/dev/null) || exit 0
+    grep -q '^Codename: trixie' <<<"$out" || exit 0
+    printf '%s %s\n' "$(tail -n1 <<<"$out")" "$m" > "$work/lat.$i" ) &
+  i=$((i + 1))
+done
+wait
+mapfile -t alive < <(cat "$work"/lat.* 2>/dev/null | sort -n | head -n "$TOP")
+(( ${#alive[@]} )) || { say "No mirror answered (network down?)"; exit 1; }
+
+# ── 2. Скорость — по очереди, чтобы замеры не делили канал ─────────────
+say "Measuring download speed of the ${#alive[@]} fastest to answer…"
+: > "$work/speed"
+for line in "${alive[@]}"; do
+  lat=${line%% *} m=${line#* }
+  r=$(curl -sS -o /dev/null -r 0-8388607 --connect-timeout 4 --max-time 6 \
+        -w '%{http_code} %{size_download} %{time_total}' "$m/$PROBE" 2>/dev/null) || true
+  read -r code size t <<<"${r:-000 0 1}"
+  # 200 (сервер отдал весь файл) или 206 (кусок) — оба годятся; таймаут max-time
+  # тоже: скорость считаем по тому, что успело прийти
+  if [[ $code == 200 || $code == 206 ]] && (( size > 0 )); then
+    kbps=$(awk -v s="$size" -v t="$t" 'BEGIN { printf "%d", (t > 0 ? s / t / 1024 : 0) }')
+  else
+    kbps=0
+  fi
+  printf '%s %s %s\n' "$kbps" "$lat" "$m" >> "$work/speed"
+  say "$(printf '  %8s KB/s  %5.0f ms  %s' "$kbps" "$(awk -v l="$lat" 'BEGIN{print l*1000}')" "$m")"
+done
+
+# Победитель: самая высокая скорость, у которого есть и trixie-updates, и backports
+best=""
+while read -r kbps _ m; do
+  (( kbps > 0 )) || continue
+  ok=1
+  for s in trixie-updates trixie-backports; do
+    curl -fsS -o /dev/null --connect-timeout 4 --max-time 6 "$m/dists/$s/InRelease" 2>/dev/null || { ok=0; break; }
+  done
+  (( ok )) && { best=$m; break; }
+  say "  $m: no trixie-updates/backports — skipped"
+done < <(sort -rn "$work/speed")
+[[ -n $best ]] || { say "Could not measure any mirror"; exit 1; }
+say "Fastest: $best"
+
+case $mode in
+  pick) echo "$best"; exit 0 ;;
+  dry)  exit 0 ;;
+esac
+
+# ── Переключить apt ───────────────────────────────────────────────────
+[[ $EUID -eq 0 ]] || { say "Run with sudo to switch apt to $best"; exit 1; }
+[[ -f $SOURCES ]] || { say "$SOURCES not found — run: sudo ~/.cyberdeck/install.sh --only apt"; exit 1; }
+# Меняем адрес у trixie, trixie-updates и trixie-backports; security остаётся
+sed -i -E "/security/! s#^URIs: .*#URIs: $best#" "$SOURCES"
+install -d -m 0755 "${STATE%/*}"; echo "$best" > "$STATE"
+say "apt now uses $best"
+apt-get update -qq && say "Package lists updated"

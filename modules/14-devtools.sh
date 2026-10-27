@@ -56,15 +56,42 @@ else
 fi
 
 # ── kubectl (pkgs.k8s.io, ветка ${K8S_MINOR}) ─────────────────────────
+k8s_ok=""
 if import_repo_key "https://pkgs.k8s.io/core:/stable:/${K8S_MINOR}/deb/Release.key" \
      /etc/apt/keyrings/kubernetes-apt-keyring.gpg; then
   echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/${K8S_MINOR}/deb/ /" \
     > /etc/apt/sources.list.d/kubernetes.list
   apt_update
-  apt_install kubectl
-  ok "kubectl $(kubectl version --client 2>/dev/null | head -n1)"
-else
-  warn "The Kubernetes repository is unreachable — kubectl not installed"
+  # Индекс pkgs.k8s.io не скачался (при первой загрузке бывало: apt пошёл по
+  # IPv6, а маршрута IPv6 нет) — ещё раз, только этот источник и по IPv4
+  if ! out_has 'pkgs\.k8s\.io' apt-cache policy kubectl; then
+    apt-get update -q -o Acquire::ForceIPv4=true \
+      -o Dir::Etc::sourcelist=sources.list.d/kubernetes.list -o Dir::Etc::sourceparts=- \
+      -o APT::Get::List-Cleanup=0 >/dev/null 2>&1 || true
+  fi
+  if out_has 'pkgs\.k8s\.io' apt-cache policy kubectl; then
+    apt_install kubectl
+    ok "kubectl $(kubectl version --client 2>/dev/null | head -n1)"
+    k8s_ok=1
+  fi
+fi
+if [[ -z ${k8s_ok:-} ]]; then
+  # pkgs.k8s.io недоступен (бывает, что из сети к нему нет доступа вовсе):
+  # источник убираем — иначе каждый apt-get update (и автообновления) спотыкался
+  # бы о него, — и ставим kubectl из Debian (1.32, старее, но работает с
+  # кластерами ±1 минорная версия). Когда репозиторий станет доступен —
+  # sudo ~/.cyberdeck/install.sh --only devtools вернёт свежий.
+  if [[ -e /etc/apt/sources.list.d/kubernetes.list ]]; then
+    rm -f /etc/apt/sources.list.d/kubernetes.list
+    apt_update                      # забыть его списки пакетов
+  fi
+  if command -v kubectl >/dev/null; then
+    warn "pkgs.k8s.io is unreachable — keeping the installed kubectl $(kubectl version --client 2>/dev/null | grep -oE 'v[0-9.]+' | head -n1)"
+  elif pkg_available kubectl && apt_install kubectl; then
+    warn "pkgs.k8s.io is unreachable — kubectl $(kubectl version --client 2>/dev/null | grep -oE 'v[0-9.]+' | head -n1) from Debian instead. Later: sudo ~/.cyberdeck/install.sh --only devtools"
+  else
+    warn "pkgs.k8s.io is unreachable and Debian has no kubectl — kubectl not installed"
+  fi
 fi
 
 # ── k9s (релиз GitHub, проверка SHA-256) ──────────────────────────────

@@ -13,7 +13,13 @@ return {
         errors = { mode = "fg" },
         styles = { comments = { italic = true } },
       })
-      vim.cmd.colorscheme("nord")
+      -- От имени root (sudo nvim, sudoedit, F4 в sudo mc) — бордовая nord-root
+      -- (colors/nord-root.lua): сразу видно, что правка идёт с правами root
+      if require("cyberdeck.root").mode() then
+        vim.cmd.colorscheme("nord-root")
+      else
+        vim.cmd.colorscheme("nord")
+      end
     end,
   },
 
@@ -126,22 +132,31 @@ return {
   {
     "nvim-lualine/lualine.nvim",
     lazy = false,
-    opts = {
-      options = {
-        theme = "nord",
-        section_separators = "",
-        component_separators = "│",
-        globalstatus = true,
-      },
-      sections = {
-        lualine_a = { "mode" },
-        lualine_b = { "branch", "diff" },
-        lualine_c = { { "filename", path = 1 } },
-        lualine_x = { "diagnostics", "filetype" },
-        lualine_y = { "progress" },
-        lualine_z = { "location" },
-      },
-    },
+    opts = function()
+      local root = require("cyberdeck.root")
+      local rmode = root.mode()
+      local a = { "mode" }
+      if rmode then
+        -- Плашка ROOT/SUDOEDIT перед режимом
+        table.insert(a, 1, { function() return rmode end, color = "CdRootBadge" })
+      end
+      return {
+        options = {
+          theme = rmode and root.lualine_theme() or "nord",
+          section_separators = "",
+          component_separators = "│",
+          globalstatus = true,
+        },
+        sections = {
+          lualine_a = a,
+          lualine_b = { "branch", "diff" },
+          lualine_c = { { "filename", path = 1 } },
+          lualine_x = { "diagnostics", "filetype" },
+          lualine_y = { "progress" },
+          lualine_z = { "location" },
+        },
+      }
+    end,
   },
 
   -- Git-метки на полях

@@ -1,0 +1,67 @@
+#!/bin/bash
+# cyberdeck-monitors-hotplug — монитор подключили или отключили (udev →
+# autorandr.service → этот скрипт, от root). Решает, трогать ли раскладку.
+#
+# Мониторы DisplayPort/HDMI, погашенные по простою (DPMS), часто сами
+# «отключаются» от видеокарты, а при пробуждении подключаются заново. Если на
+# каждое такое событие сразу звать autorandr, он раскладывает оставшийся
+# монитор «горизонтально», а уснувший выключает в X — и тот уже не
+# просыпается (на него больше не подают сигнал), а панель с него пропадает.
+# Поэтому:
+#   • пока экран X погашен (xset q: «Monitor is Off/Standby/Suspend») —
+#     раскладку не трогаем, только запоминаем, какие мониторы видны;
+#   • события идут пачками — ждём 4 с, пока всё уляжется, и смотрим итог;
+#   • мониторов стало больше, чем в прошлый раз (проснулись, подключили) —
+#     профиль применяется заново принудительно (--force), даже если X считает
+#     его текущим: так уснувший монитор точно получает сигнал;
+#   • открыт редактор раскладки (cyberdeck-displays) — ничего не делаем.
+set -u
+RUN=${CD_RUN:-/run} DRM=${CD_DRM:-/sys/class/drm}   # другие пути — только для тестов
+STATE=$RUN/cyberdeck-monitors.state
+EDIT_LOCK=/tmp/.cyberdeck-displays-edit
+exec 9>"$RUN/cyberdeck-monitors.lock"
+flock 9                                   # события по одному
+
+[[ -n $(find "$EDIT_LOCK" -mmin -30 2>/dev/null) ]] && exit 0
+sleep 4
+
+connected() { # подключённые разъёмы видеокарт, кроме NVIDIA (у них нет экранов)
+  local s card
+  for s in "$DRM"/card*-*/status; do
+    [[ -r $s && $(<"$s") == connected ]] || continue
+    card=${s#"$DRM"/}; card=${card%%-*}
+    [[ $(readlink -f "$DRM/$card/device/driver") == */nvidia* ]] && continue
+    s=${s%/status}; echo "${s##*/}"
+  done | sort | tr '\n' ' '
+}
+now=$(connected)
+prev=$(cat "$STATE" 2>/dev/null || true)
+echo "$now" > "$STATE"
+
+# Экран X сеанса погашен? Сеанс на мониторах — i3 на дисплее :0 (у сеансов RDP — :10 и дальше);
+# если такого нет — самый первый i3
+pid="" p=""
+for p in $(pgrep -x i3); do
+  { tr '\0' '\n' < "/proc/$p/environ"; } 2>/dev/null | grep -qx 'DISPLAY=:0' && { pid=$p; break; }
+done
+[[ -n $pid ]] || pid=$(pgrep -xo i3 || true)
+if [[ -n $pid ]]; then
+  user=$(stat -c %U "/proc/$pid")
+  home=$(getent passwd "$user" | cut -d: -f6)
+  disp=$({ tr '\0' '\n' < "/proc/$pid/environ"; } 2>/dev/null | sed -n 's/^DISPLAY=//p')
+  xauth=$({ tr '\0' '\n' < "/proc/$pid/environ"; } 2>/dev/null | sed -n 's/^XAUTHORITY=//p')
+  # startx не всегда передаёт XAUTHORITY — тогда ключ в ~/.Xauthority
+  dpms=$(runuser -u "$user" -- env HOME="$home" DISPLAY="${disp:-:0}" XAUTHORITY="${xauth:-$home/.Xauthority}" \
+           xset q 2>/dev/null | grep -o 'Monitor is [A-Za-z]*' || true)
+  if [[ -z $dpms ]]; then
+    logger -t cyberdeck-monitors "could not read the screen state (xset q on ${disp:-:0}) — assuming it is on"
+  elif [[ $dpms != "Monitor is On" ]]; then
+    logger -t cyberdeck-monitors "screen is off ($dpms): monitors now [$now] — layout left as is"
+    exit 0
+  fi
+fi
+
+force=()
+(( $(wc -w <<<"$now") > $(wc -w <<<"$prev") )) && force=(--force)
+logger -t cyberdeck-monitors "monitors [$prev] -> [$now]${force:+, reapplying the layout}"
+exec /usr/bin/autorandr --batch --change --default horizontal "${force[@]}"

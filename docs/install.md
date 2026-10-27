@@ -17,7 +17,8 @@ sudo ./install.sh --list              # list modules
 ```
 
 - On the first run the installer shows the hardware it detected and waits 30 s: press Enter to change anything (see [Hardware](hardware.md)).
-- Every run starts with `apt-get update`, whatever modules are selected.
+- Every run starts with `apt-get update`, whatever modules are selected. An unreachable third-party repository only produces a warning (after a second try over IPv4) — its packages are skipped, everything else installs. Downloads never hang: a transfer slower than 1 KB/s for a minute is dropped and retried over IPv4.
+- **Debian mirror:** on the first run the installer measures the mirrors in `/etc/cyberdeck/mirrors.list` (the CDN `deb.debian.org`, Russian mirrors and the nearest countries, from debian.org's list): all are checked in parallel for a working trixie, the six quickest to answer are timed downloading 8 MB, and the fastest one that also carries trixie-updates and trixie-backports is used (security updates always come from `security.debian.org`). The choice is kept in `/etc/cyberdeck/apt-mirror`. To measure again and switch: `sudo cyberdeck-mirror` (`--dry-run` only shows the table); add your own mirror as a line in `mirrors.list`.
 - Log: `/var/log/cyberdeck-install.log`. Running it again is safe: modules are idempotent, original system files are kept as `*.cyberdeck.orig`, your own files go to `~/.cyberdeck-backup/<date>/`. Bring them back with `cyberdeck-restore` (see [Rollback](#rollback)).
 - After changing the repository, apply it with `cyberdeck-update` (a zsh alias) or `sudo ./install.sh --only apps,dotfiles`.
 

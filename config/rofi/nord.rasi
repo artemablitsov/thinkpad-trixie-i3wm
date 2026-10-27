@@ -7,6 +7,7 @@
     nord4:  #D8DEE9;
     nord6:  #ECEFF4;
     nord8:  #88C0D0;
+    nord13: #EBCB8B;
     nord11: #BF616A;
 
     background-color: transparent;
@@ -53,12 +54,15 @@ element {
     spacing:  0.75em;
     children: [ element-text ];
 }
-element-text { vertical-align: 0.5; highlight: bold #8FBCBB; }
+/* Совпадения с поиском: в обычных строках — жёлтые (nord13) с подчёркиванием,
+   в выбранной (голубой фон) — тёмные с подчёркиванием, иначе голубое на голубом.
+   Состояние строки (selected.*) rofi передаёт и element-text — селектор
+   «element-text selected.normal», а не «element selected.normal element-text». */
+element-text { vertical-align: 0.5; highlight: bold underline #EBCB8B; }
 
 element normal.normal,
 element alternate.normal { background-color: transparent; text-color: @nord4; }
 element selected.normal  { background-color: @nord8; text-color: @nord0; }
-element selected.normal element-text { highlight: bold #2E3440; }
 element normal.urgent,
 element alternate.urgent { text-color: @nord11; }
 element selected.urgent  { background-color: @nord11; text-color: @nord6; }
@@ -67,6 +71,9 @@ element alternate.active { text-color: @nord8; }
 element selected.active  { background-color: @nord8; text-color: @nord0; }
 
 element-text { background-color: inherit; text-color: inherit; }
+element-text selected.normal,
+element-text selected.active { highlight: bold underline #2E3440; }
+element-text selected.urgent { highlight: bold underline #ECEFF4; }
 
 mode-switcher { spacing: 0; }
 button {

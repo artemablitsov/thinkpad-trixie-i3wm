@@ -21,6 +21,23 @@ What is installed for files, editing, containers and development — and how it 
 
 Docxy and Xlsxy are a TUI office suite, [yeroo/docxy](https://github.com/yeroo/docxy); the installer builds them from a pinned commit with `cargo install --locked` (installing rustup if needed). All of these programs are in rofi with icons (without a file argument they offer an fzf picker).
 
+## Root in burgundy
+
+Anything you run as root looks different, so a root `mc` or editor is never mistaken for your own:
+
+| | You | Root |
+|---|---|---|
+| mc | skin `nord` (16 terminal colours) | skin `nord-root` — 24-bit burgundy: panels `#2B1D23`, frames `#A23B55`, the cursor bar burgundy, headers rose |
+| Neovim | `nord` (nord.nvim), lualine | `nord-root` (`colors/nord-root.lua`) and a `ROOT` badge before the mode |
+| sudoedit | — | your full config with `nord-root` and a `SUDOEDIT` badge |
+
+How it is wired:
+
+- **Root's own files, owned by root.** The dotfiles module writes `/root/.config/mc/ini` (`skin=nord-root`, F4 opens Neovim) and a plugin-free `/root/.config/nvim` (your options, filetypes and keys, the `nord-root` scheme, a status line without plugins, netrw on `Ctrl+n`). They are copies: root never executes files from your home directory, which you — or anything running as you — could change. An `init.lua` that is not Cyberdeck's is left alone.
+- **Your config detects root too.** When your Neovim config runs as root (`sudo -E nvim`) or under `sudoedit`, `lua/cyberdeck/root.lua` switches it to `nord-root` and puts the badge into lualine.
+- **24-bit colour through sudo.** `/etc/sudoers.d/cyberdeck-root` keeps `COLORTERM`, which tells mc that the terminal (kitty) can show 24-bit colour. The skin is picked before mc starts, so mc never complains that a skin does not suit the terminal: `sudo mc` goes through `/usr/local/bin/mc`, a small wrapper, and `su -` / `sudo -i` get `MC_SKIN` from root's `~/.bashrc` (Debian's `mc` alias runs `/usr/bin/mc` directly). Without 24-bit colour — a text console — it is the 16-colour `nord-root16`: Nord with red accents instead of cyan. Neovim falls back the same way on its own.
+- The palette: Nord's Snow Storm text and Aurora colours stay; Polar Night becomes burgundy (`#2B1D23` `#3A262E` `#4A2F3A` `#6B4655`) and Frost becomes rose (`#E8B4BC` `#E08A97` `#C9677A` `#A23B55`). The pictures in the README are drawn from these files by `tools/render-themes.py`.
+
 ## Neovim
 
 - Treesitter: bash, c, c++, go, rust, python, dockerfile, yaml (including compose and k8s), json, xml, markdown, js/ts/tsx, html, css/scss, terraform, hcl, sql, lua, toml, make, proto, nginx, helm and more.
@@ -46,7 +63,7 @@ Neovim is the default editor everywhere: `$EDITOR`/`$VISUAL`/`$SUDO_EDITOR`, `up
 - **Container ports are visible only to the laptop by default** (`"ip": "127.0.0.1"` in `/etc/docker/daemon.json`). Docker's published ports bypass the firewall, so without this `docker run -p 5432:5432 postgres` would expose the database to the whole café network. To publish to the network, say so explicitly: `-p 0.0.0.0:8080:80`.
 - Container logs are compressed and rotated (`log-driver: local`), and containers survive daemon restarts during upgrades (`live-restore`).
 - Your user is in the `docker` group so you don't need `sudo`. This is equivalent to root access; to undo it: `sudo gpasswd -d $USER docker`. The group takes effect after you log in again.
-- **kubectl** comes from pkgs.k8s.io; the minor branch is set in `lib/versions.sh` (`K8S_MINOR`). To move to a new minor version, change it and run `--only devtools`.
+- **kubectl** comes from pkgs.k8s.io; the minor branch is set in `lib/versions.sh` (`K8S_MINOR`). To move to a new minor version, change it and run `--only devtools`. If pkgs.k8s.io can't be reached, the installer doesn't stop: it removes that source (so `apt-get update` and automatic updates don't trip over it) and installs Debian's older kubectl instead; run `--only devtools` again once the repository is reachable.
 - **k9s** — GitHub release (SHA-256), a `nord` skin in the exact palette colours, no logo, mouse enabled.
 - **VS Code** — Nord theme (arcticicestudio), Material icons, JetBrainsMono 14, telemetry off, the Kubernetes schema for YAML.
 - **helm**, **stern** (logs from several pods at once: `stern app=api`), **kubectx**/**kubens** (switch cluster and namespace).
@@ -78,6 +95,7 @@ Installed from the GitHub release `.deb` (v4.1.1: v4.1.2 has no Linux build), wi
 ## Passwords and keys
 
 - **The keyring (gnome-keyring)** is unlocked by your password at login. VS Code (GitHub sign-in, Settings Sync), Yandex Browser (saved passwords) and `docker login` keep their secrets in it. Without it, Chromium-based browsers under i3 store passwords encrypted with a well-known key, and Docker puts the registry password into `~/.docker/config.json` in almost plain text.
+- The `login` keyring (created and unlocked by PAM at login) is the **default** one (`~/.local/share/keyrings/default`). Without that file, libsecret apps (VS Code, Electron, docker) write to a default keyring that doesn't exist and ask to create one — under i3 there is no window for that, and VS Code says "OS keyring is not available".
 - The keyring is unlocked only by a **password** login: a fingerprint cannot provide its key. That is why the login screen doesn't accept a finger.
 - **SSH key** passphrases are asked once per session (`AddKeysToAgent yes` in `~/.ssh/config`) and forgotten after 10 h or when you leave i3.
 - If you ran `docker login` before, run it again so the password moves into the keyring, and delete the old `auths` entry from `~/.docker/config.json`.

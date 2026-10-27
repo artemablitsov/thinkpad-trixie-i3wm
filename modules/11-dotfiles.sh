@@ -149,8 +149,8 @@ copy_user "$C/mc/ini"                "$H/.config/mc/ini"
 copy_user "$C/mc/panels.ini"         "$H/.config/mc/panels.ini"
 as_user mkdir -p "$H/.local/share/mc/skins"
 link_user "$C/mc/nord.ini" "$H/.local/share/mc/skins/nord.ini"
-# Скин и системно — для root (sudo mc) и других пользователей
-install -Dm0644 "$C/mc/nord.ini" /usr/share/mc/skins/nord.ini
+# Скины системно — для других пользователей и для root
+for sk in nord nord-root nord-root16; do install -Dm0644 "$C/mc/$sk.ini" "/usr/share/mc/skins/$sk.ini"; done
 # ini мог существовать до установки (mc создаёт его при первом запуске) — принудительно ставим скин
 # Правки ini — от имени пользователя (sed -i от root оставил бы файл root'у)
 mc_ini="$H/.config/mc/ini"
@@ -171,6 +171,51 @@ sys_ext=/etc/mc/mc.ext.ini
     awk 'BEGIN{skip=0} /^\[mc\.ext\.ini\]/{skip=1;next} /^\[/{skip=0} !skip' "$sys_ext"
   fi
 } | put_user "$H/.config/mc/mc.ext.ini"
+
+# ── root: бордовые темы mc и Neovim (nord-root) ───────────────────────
+# Чтобы с первого взгляда было видно, что работаешь от имени root: sudo mc,
+# sudo nvim, su -, F4 в sudo mc, visudo, crontab -e. Всё — копии, принадлежат
+# root: пользовательские файлы (симлинки в репозиторий) root не исполняет.
+ROOT_HOME=$(getent passwd root | cut -d: -f6); ROOT_HOME=${ROOT_HOME:-/root}
+# mc: nord-root (24-битный цвет), а где его нет (текстовая консоль) — 16-цветный
+# nord-root16. Скин выбирается ДО запуска mc — иначе mc при каждом запуске
+# ругался бы, что скин не подходит терминалу:
+#   • sudo mc  → /usr/local/bin/mc (обёртка, sudo ищет программы сначала там);
+#   • su -, sudo -i → ~/.bashrc root: Debian подменяет mc алиасом mc-wrapper.sh,
+#     который запускает /usr/bin/mc мимо обёртки — MC_SKIN задаём в оболочке.
+install -d -m 0700 "$ROOT_HOME/.config"
+install_sys usr/local/bin/mc 0755
+# Запасной скин прежней версии Cyberdeck (подменял «default» у root) — больше не нужен
+grep -qs 'nord-root16' "$ROOT_HOME/.local/share/mc/skins/default.ini" && rm -f "$ROOT_HOME/.local/share/mc/skins/default.ini"
+touch "$ROOT_HOME/.bashrc"
+sed -i '/# Cyberdeck: mc skin for root/,/# Cyberdeck: end/d' "$ROOT_HOME/.bashrc"
+cat >> "$ROOT_HOME/.bashrc" <<'RCEOF'
+# Cyberdeck: mc skin for root (burgundy; 16 colours where there is no 24-bit colour)
+case "${COLORTERM:-}" in truecolor|24bit) export MC_SKIN=nord-root ;; *) export MC_SKIN=nord-root16 ;; esac
+# Cyberdeck: end
+RCEOF
+root_mc="$ROOT_HOME/.config/mc/ini"
+install -d -m 0700 "$ROOT_HOME/.config/mc"
+[[ -e $root_mc ]] || printf '[Midnight-Commander]\n' > "$root_mc"
+for kv in skin=nord-root use_internal_edit=false; do
+  k=${kv%%=*}
+  if grep -q "^$k=" "$root_mc"; then sed -i "s/^$k=.*/$kv/" "$root_mc"
+  elif grep -q '^\[Midnight-Commander\]' "$root_mc"; then sed -i "/^\[Midnight-Commander\]/a $kv" "$root_mc"
+  else printf '[Midnight-Commander]\n%s\n' "$kv" >> "$root_mc"; fi
+done
+# Neovim: свой конфиг root без плагинов; чужой (не от Cyberdeck) не трогаем
+root_nv="$ROOT_HOME/.config/nvim"
+if [[ -e $root_nv/init.lua ]] && ! grep -q 'CYBERDECK · Neovim для root' "$root_nv/init.lua"; then
+  warn "$root_nv/init.lua is not Cyberdeck's — root's Neovim keeps it (the nord-root theme is in /usr/share/cyberdeck/nvim-root)"
+else
+  install -Dm0644 "$C/nvim-root/init.lua" "$root_nv/init.lua"
+  install -Dm0644 "$C/nvim/colors/nord-root.lua" "$root_nv/colors/nord-root.lua"
+  for m in options filetypes keymaps selection_highlight root; do
+    install -Dm0644 "$C/nvim/lua/cyberdeck/$m.lua" "$root_nv/lua/cyberdeck/$m.lua"
+  done
+fi
+install -Dm0644 "$C/nvim/colors/nord-root.lua" /usr/share/cyberdeck/nvim-root/colors/nord-root.lua
+ok "root: mc and Neovim in burgundy (nord-root)"
 
 # ── Ярлыки rofi (иконки для TUI-приложений) ───────────────────────────
 as_user mkdir -p "$H/.local/share/applications"
@@ -282,6 +327,14 @@ as_user xdg-settings set default-web-browser yandex-browser.desktop 2>/dev/null 
 as_user install -d -m 0700 "$H/.ssh"
 if ! as_user grep -qs '^ *AddKeysToAgent' "$H/.ssh/config"; then
   as_user sh -c 'umask 077; printf "\n# Cyberdeck: the key passphrase is asked once per session\nHost *\n    AddKeysToAgent yes\n" >> "$1"' sh "$H/.ssh/config"
+fi
+# Связка «login» (её создаёт и открывает PAM при входе) — связка по умолчанию.
+# Без файла default приложения через libsecret (VS Code, Electron, docker)
+# пишут в «связку по умолчанию», которой нет, и просят создать новую — окна
+# для этого под i3 нет, и VS Code пишет «OS keyring is not available».
+as_user install -d -m 0700 "$H/.local/share/keyrings"
+if [[ ! -s "$H/.local/share/keyrings/default" ]]; then
+  as_user sh -c 'umask 077; printf login > "$1"' sh "$H/.local/share/keyrings/default"
 fi
 # VS Code не узнаёт i3 и без подсказки хранит токены (GitHub, Settings Sync) хуже
 as_user python3 -I - "$H/.vscode/argv.json" <<'PY' || warn "VS Code: password-store was not configured"

@@ -1,0 +1,14 @@
+#!/bin/sh
+# Cyberdeck: mc от root — бордовый скин, чтобы сразу было видно, чьими правами
+# работаешь. В терминале с 24-битным цветом (COLORTERM=truecolor: kitty; sudo его
+# передаёт) — nord-root, иначе (текстовая консоль) — 16-цветный nord-root16.
+# Скин выбирается до запуска mc, поэтому mc не ругается, что скин не подходит
+# терминалу. Для остальных пользователей ничего не меняет.
+if [ "$(id -u)" = 0 ] && [ -z "${MC_SKIN:-}" ]; then
+  case "${COLORTERM:-}" in
+    truecolor|24bit) MC_SKIN=nord-root ;;
+    *)               MC_SKIN=nord-root16 ;;
+  esac
+  export MC_SKIN
+fi
+exec /usr/bin/mc "$@"

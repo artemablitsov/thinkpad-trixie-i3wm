@@ -81,6 +81,9 @@ true
 # Сохранённые профили (autorandr --save дом) имеют приоритет; для незнакомых
 # мониторов — горизонтально, при закрытой крышке — только внешний.
 install_sys etc/systemd/system/autorandr.service.d/10-cyberdeck.conf
+# Её решает, трогать ли раскладку (не трогать, пока мониторы погашены; ждать, пока
+# пачка событий уляжется; проснувшиеся — заново профилем)
+install_sys usr/local/sbin/cyberdeck-monitors-hotplug 0755
 systemctl daemon-reload
 
 # ── Сканер отпечатков (на T14s Gen2 AMD — Synaptics 06cb:00bd) ──────────
@@ -100,6 +103,13 @@ if [[ $HW_FINGERPRINT == yes ]] && compgen -G '/usr/lib/udev/hwdb.d/*fprint*' >/
   [[ $fp_state == supported ]] \
     || warn "Fingerprint reader: libfprint does not support it (${fp_state}) — fprintd will not see it. Validity 138a:0090/0097 and some Goodix/Elan readers need out-of-tree drivers."
 fi
+
+# ── Флешки, USB-диски, SD-карты: честный прогресс копирования ─────────
+# Не больше 32 МБ недописанных данных (вместо до 1 ГБ в памяти): копирование идёт
+# со скоростью самой флешки, и 100 % — значит, данные уже на ней
+install_sys usr/local/sbin/cyberdeck-bdi-limit 0755
+install_sys etc/udev/rules.d/61-cyberdeck-removable-writeback.rules
+udevadm control --reload-rules 2>/dev/null && udevadm trigger -s block --action=change 2>/dev/null || true
 
 # ── SSD/NVMe: еженедельный TRIM ───────────────────────────────────────
 systemctl enable fstrim.timer >/dev/null 2>&1 || true

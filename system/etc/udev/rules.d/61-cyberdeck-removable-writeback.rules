@@ -1,0 +1,9 @@
+# Cyberdeck: честный прогресс копирования на флешки, USB-диски и SD-карты.
+# Обычно ядро держит до vm.dirty_bytes (1 ГБ) ещё не записанных данных в памяти:
+# копирование показывает 100 %, а флешка пишет ещё минуту. Здесь для таких
+# устройств — не больше 32 МБ недописанного (max_bytes) и строго (strict_limit):
+# программа копирования ждёт флешку, и её прогресс совпадает с реальной записью.
+# На внутренние диски не влияет. Вынимать — всё равно после «Eject».
+# Проверить: cat /sys/block/sdX/bdi/max_bytes /sys/block/sdX/bdi/strict_limit
+ACTION=="add|change", SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", ENV{ID_BUS}=="usb", RUN+="/usr/local/sbin/cyberdeck-bdi-limit %M:%N"
+ACTION=="add|change", SUBSYSTEM=="block", ENV{DEVTYPE}=="disk", KERNEL=="mmcblk[0-9]*", RUN+="/usr/local/sbin/cyberdeck-bdi-limit %M:%N"

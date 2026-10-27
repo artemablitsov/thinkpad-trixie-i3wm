@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Monitors
-Comment=Save the current display layout as an autorandr profile
+Name=Displays
+Comment=Arrange, rotate and set the resolution of monitors (arandr); the layout is remembered
 Icon=preferences-desktop-display
-Exec=sh -c 'n=$(rofi -dmenu -p "profile name" -l 0) && [ -n "$n" ] && autorandr --save "$n" --force && notify-send "Displays" "Profile \"$n\" saved"'
+Exec=cyberdeck-displays
 Terminal=false
 Categories=Settings;HardwareSettings;

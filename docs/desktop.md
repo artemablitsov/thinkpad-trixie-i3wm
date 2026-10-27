@@ -23,11 +23,13 @@ i3 + picom + polybar, TUI wherever possible, one Nord theme from GRUB to Qt dial
 | `Win+n` | mc · `Win+e` nvim · `Win+w` browser · `Win+Shift+m` cmus |
 | `Win+c` / `Win+Shift+n` / `Win+Shift+b` / `Win+Shift+a` | calendar / network / bluetooth / sound |
 | `Win+Shift+Esc` | htop |
+| `Win+Shift+p` | monitors: position, rotation, resolution, main monitor (arandr); the layout is remembered |
 | `Win+Shift+q` | close the window |
 | `Win+h/j/k/l`, `+Shift` | focus / move |
 | `Win+1…0`, `+Shift` | workspaces |
 | `Win+f`, `Win+Shift+Space`, `Win+r` | fullscreen, floating, resize |
 | `Win+Ctrl+Space` | focus: floating ⇄ tiled windows |
+| `Win+Ctrl+Shift+←/→/↑/↓` (or `h`/`l`) | move the whole workspace to the neighbouring monitor |
 | `Fn+F1` / `Fn+F2` / `Fn+F3` | mute / volume −/+ 5 % (up to 100 %; raising the volume unmutes) |
 | `Fn+F4` | microphone on/off |
 | `Fn+Space` | keyboard backlight: off / low / high (switched by the firmware; the bar shows the level) |
@@ -50,7 +52,7 @@ The volume and brightness keys show a thin bar at the bottom of the primary moni
 
 Text labels instead of icons; only the network, Bluetooth, the temperature and the battery keep an icon. Bluetooth shows the connected device name, or `---` when nothing is connected (a grey crossed-out icon when the adapter is off). The network shows the Wi-Fi (or Ethernet) icon and the connection name, without signal strength (no connection — a red crossed-out icon and `---`). The battery percentage turns red below 20 %. The battery shows the estimated time left (or `full in …` while charging) and the power profile as text: `power-saver` green, `balanced` yellow, `performance` red. The clock is centred in the free space between the workspaces and the right side, so a long right side never covers it.
 
-Clicking a module opens a TUI in a floating window **in the middle of the primary monitor** — whichever monitor's panel you clicked — on top of whatever is open, fullscreen windows included, and it stays visible when you switch workspaces. The primary monitor is the external one when it is connected, otherwise the laptop screen (`cyberdeck-primary`, run at login and by autorandr). The window takes 58 % × 65 % of that monitor. Clicking again closes it; if the window is open but not focused, the click brings it back to the centre of the primary monitor and focuses it:
+Clicking a module opens a TUI in a floating window **in the middle of the primary monitor** — whichever monitor's panel you clicked — on top of whatever is open, fullscreen windows included, and it stays visible when you switch workspaces. The primary monitor is the one you picked with `Win+Shift+p`, otherwise the largest external monitor, otherwise the laptop screen (`cyberdeck-primary`, see [Displays](hardware.md#displays)). The window takes 58 % × 65 % of that monitor. Clicking the module again closes it; if the window is open but not focused, the click brings it back to the centre of the primary monitor and focuses it. **Esc** closes it only where the program has no use for Esc: `pulsemixer` and `nmtui` quit on Esc themselves (`nmtui` from its main screen — in its forms Esc means "back"), and for `s-tui` the terminal closes the window on Esc. In `htop`, `ikhal`, `bluetuith` and `jolt` Esc cancels a search or filter and closes dialogs and menus, so it is left to them; `q` quits:
 
 | Module | Left click | Other |
 |---|---|---|
@@ -91,10 +93,12 @@ The background is a solid colour with no image. The original put a dark panel un
 
 GRUB (Nord theme) → **plymouth: cubes in a sphere in Nord colours** → login screen.
 
+The GRUB menu waits 5 s (an external monitor takes a second or two to sync after the firmware logo) and keeps the video mode the firmware set (no blink from a mode switch). After you pick the entry, GRUB's dark background stays on screen until the graphics driver is up and the splash starts (2–3 s), instead of a black screen; on Intel graphics `i915.fastboot=1` keeps the firmware's mode where it can, so the screen doesn't blank in between.
+
 - The splash is the [cubes](https://github.com/adi1090x/plymouth-themes/tree/master/pack_1/cubes) theme by adi1090x (GPL-3.0), recoloured to Nord: all 81 frames are mapped by brightness onto the Frost gradient (nord10 → nord8 → nord6) on a nord0 background. Frames and script are in `system/usr/share/plymouth/themes/cubes-nord/`.
 - Kernel and systemd messages, `[ OK ] Started …` lines and "Loading Linux…" are hidden both at boot and at shutdown — shutdown shows the splash too. `Esc` during boot shows the detailed log.
 - **Encrypted disk (LUKS):** a "Disk password" field appears below the animation (with Nord blue dots). If the theme ever fails to load, plymouth falls back to text mode and asks for the password on a plain screen.
-- **Unencrypted disk:** messages are additionally sent to the invisible console tty12 (`Ctrl+Alt+F12`).
+- **Unencrypted disk:** messages are additionally sent to the invisible console tty12 (`Ctrl+Alt+F12`). plymouth treats any kernel console other than tty0/tty1 as a serial one and forces text mode there — the boot log instead of the splash — so the command line also has `plymouth.ignore-serial-consoles`.
 - The login screen (tuigreet) opens on tty1 right after the splash; after login X starts without printing to the console (`~/.local/state/cyberdeck/startx.log`), and the console is cleared when i3 exits.
 
 If something fails to boot: `Esc` or `Ctrl+Alt+F12` shows the messages, and in the GRUB menu (key `e`) you can remove `quiet splash console=tty12`.
@@ -105,7 +109,7 @@ One wallpaper: **ai-ecosystem** — an "AI Ecosystem" diagram in chalk on a dark
 
 ## USB drives, clipboard, emoji, calculator
 
-- **USB sticks and external drives** are mounted automatically in `/media/$USER/<label>`; the notification has an "open" button (mc in that directory). Before unplugging: rofi → "Eject" or `udiskie-umount -a`.
+- **USB sticks and external drives** are mounted automatically in `/media/$USER/<label>`; the notification has an "open" button (mc in that directory). Copy progress to them is honest: at most 32 MB of a USB drive's or SD card's data waits in memory (instead of up to 1 GB), so the copy goes at the stick's real speed and 100 % means the data is on it. Before unplugging, still: rofi → "Eject" or `udiskie-umount -a` — wait for the notification.
 - **Clipboard history** (`Win+Shift+V`, greenclip): the last 100 entries, images included. Kept in `/run/user/…` — in memory, gone after logout or shutdown. KeePassXC, Bitwarden and 1Password windows are never recorded. Clear it: rofi → "Clipboard: clear".
 - **Emoji** (`Win+.`): search by English name (`fire`, `heart`, `thumbs`).
 - **Calculator** (`Win+=`): qalc understands units, percentages and number bases; Enter on the result copies it.

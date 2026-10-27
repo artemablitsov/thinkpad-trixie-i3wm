@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+# cyberdeck-displays — расположение, поворот, разрешение мониторов (Win+Shift+p,
+# пункт «Displays» в rofi; пункт ARandR ведёт сюда же). Открывает arandr:
+# мониторы перетаскиваются мышью, поворот — правый клик по монитору →
+# Orientation, разрешение — Resolution, затем Apply (галочка). После закрытия
+# arandr спрашивает имя и сохраняет раскладку профилем autorandr — при входе и
+# при переподключении этих же мониторов она восстановится сама.
+#
+# Пока arandr открыт, автоматическое переключение autorandr (служба по udev)
+# выключено: на Intel смена режима сама рождает событие «монитор
+# переподключён», и служба успевала вернуть «horizontal» раньше, чем раскладку
+# сохранили, — настройки «не сохранялись».
+set -u
+LOCK=/tmp/.cyberdeck-displays-edit            # его проверяет autorandr.service (drop-in)
+touch "$LOCK"
+# Флаг старше 30 минут служба не учитывает (на случай падения) — пока arandr
+# открыт, обновляем его раз в минуту
+( while sleep 60; do touch "$LOCK"; done ) & keep=$!
+trap 'kill $keep 2>/dev/null; rm -f "$LOCK"' EXIT
+state() { xrandr --query 2>/dev/null | grep -E ' connected' ; }
+before=$(state)
+arandr
+after=$(state)
+
+# Основной монитор: полная панель, рабочий стол 1, всплывающие окна. В arandr
+# его не выбрать — спрашиваем здесь (если мониторов больше одного); выбор
+# попадает в сохраняемый профиль и запоминается (cyberdeck-primary).
+mapfile -t mons < <(xrandr --query 2>/dev/null | awk '/ connected/ && /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/ {
+  geo = ""; if (match($0, /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/)) geo = substr($0, RSTART, RLENGTH)
+  split(geo, g, /[x+]/); orient = (g[2] > g[1]) ? "portrait" : "landscape"
+  printf "%s%s  %s  %s\n", ($3 == "primary") ? "• " : "  ", $1, geo, orient }')
+if (( ${#mons[@]} > 1 )); then
+  pick=$(printf '%s\n' "${mons[@]}" | rofi -dmenu -i -p "main monitor" -l ${#mons[@]} \
+           -mesg "The main monitor gets the full panel and workspace 1 (• — now)") || pick=""
+  out=$(awk '{print ($1 == "•") ? $2 : $1}' <<<"$pick")
+  if [[ -n $out ]]; then
+    xrandr --output "$out" --primary
+    cyberdeck-primary                      # запомнить выбор
+    after="$after
+primary:$out"                              # чтобы панели перезапустились и без сохранения
+  fi
+fi
+
+cur=$(autorandr --current 2>/dev/null | head -n1)
+mesg="Save this layout? It is restored automatically for these monitors (Esc — don't save)"
+[[ "$after" == "$before" ]] && mesg="Nothing changed — did you press Apply (the check mark) in arandr? Save the current layout anyway? (Esc — no)"
+# Не сохранили, но раскладку поменяли (например, включили монитор) — панели
+# всё равно перезапускаем под новые экраны
+panels() { [[ "$after" != "$before" ]] && "$HOME/.config/polybar/launch.sh" >/dev/null 2>&1; exit 0; }
+name=$(printf '%s\n' "${cur:-desk}" | rofi -dmenu -p "save layout as" -l 1 -mesg "$mesg") || panels
+name=${name//[^A-Za-z0-9_.-]/_}
+[[ -n $name ]] || panels
+if err=$(autorandr --save "$name" --force 2>&1); then
+  # --load запускает postswitch: основной монитор, панели, обои, полоска громкости
+  autorandr --load "$name" >/dev/null 2>&1
+  notify-send -a monitors "Displays" "Layout saved as \"$name\" — restored automatically for these monitors"
+else
+  notify-send -u critical -a monitors "Displays" "Could not save the layout: ${err:0:300}"
+  panels
+fi

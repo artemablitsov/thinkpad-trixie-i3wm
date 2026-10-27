@@ -1,10 +1,53 @@
 #!/usr/bin/env bash
-# cyberdeck-primary — назначить основной монитор (xrandr --primary): внешний,
-# если подключён, иначе встроенный экран. На основном мониторе — всплывающие
-# окна панели (по центру) и полоска громкости/яркости. Вызывают: i3 при входе
-# и autorandr после смены мониторов.
+# cyberdeck-primary — основной монитор (xrandr --primary). На нём полная панель,
+# рабочий стол 1, всплывающие окна панели и полоска громкости. Вызывают: i3 при
+# входе, autorandr после смены мониторов, запуск панелей.
+#   • основной назначен (сохранённый профиль autorandr, arandr, xrandr --primary) —
+#     так и остаётся, и он запоминается (~/.config/cyberdeck/primary-output);
+#   • не назначен (монитор переподключался, засыпал, X сбросил флаг) — тот, что
+#     был основным в прошлый раз, если он подключён;
+#   • иначе — монитор с наибольшим разрешением, альбомный раньше повёрнутого в
+#     портрет; встроенный экран ноутбука — последним.
+#   Выбрать самому: Win+Shift+p (cyberdeck-displays спрашивает основной монитор).
 q=$(xrandr --query 2>/dev/null) || exit 0
-out=$(awk '/ connected/ && $1 !~ /^(eDP|LVDS|DSI)/ {print $1; exit}' <<<"$q")
-[[ -n $out ]] || out=$(awk '/ connected/ {print $1; exit}' <<<"$q")
+MEM="${XDG_CONFIG_HOME:-$HOME/.config}/cyberdeck/primary-output"
+FB="${MEM%/*}/primary-fallback"     # основной, назначенный временно (запомненный был недоступен)
+mkdir -p "${MEM%/*}"
+mem=$(cat "$MEM" 2>/dev/null) fb=$(cat "$FB" 2>/dev/null)
+cur=$(awk '/ connected primary [0-9]/ {print $1; exit}' <<<"$q")
+# Активные (включённые, с режимом) мониторы
+active=$(awk '/ connected/ && /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/ {print $1}' <<<"$q")
+mem_ok=0; [[ -n $mem ]] && grep -qx "$mem" <<<"$active" && mem_ok=1
+if [[ -n $cur ]]; then
+  if [[ $cur == "$fb" ]]; then
+    # Временный основной, а запомненный вернулся — возвращаем его
+    if (( mem_ok )) && [[ $mem != "$cur" ]]; then
+      xrandr --output "$mem" --primary
+      rm -f "$FB"
+      logger -t cyberdeck-monitors "primary back on $mem" 2>/dev/null
+    fi
+  else
+    rm -f "$FB"
+    [[ $mem == "$cur" ]] || echo "$cur" > "$MEM"
+  fi
+  exit 0
+fi
+out=""
+(( mem_ok )) && out=$mem
+if [[ -z $out ]]; then
+  out=$(awk '
+    / connected/ && /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/ {
+      name = $1; px = 0
+      if (match($0, /[0-9]+x[0-9]+\+/)) { split(substr($0, RSTART, RLENGTH - 1), r, "x"); px = r[1] * r[2] }
+      if (r[2] > r[1]) px = px / 2                          # повёрнутый в портрет — после альбомного
+      if (name ~ /^(eDP|LVDS|DSI)/) px = px / 1000          # встроенный — в последнюю очередь
+      if (px > best) { best = px; pick = name }
+      if (!first) first = name
+    }
+    END { print (pick ? pick : first) }' <<<"$q")
+fi
 [[ -n $out ]] || exit 0
-grep -q "^$out connected primary" <<<"$q" || xrandr --output "$out" --primary
+xrandr --output "$out" --primary
+if [[ $out == "$mem" ]]; then rm -f "$FB"; else echo "$out" > "$FB"; fi
+logger -t cyberdeck-monitors "primary was not set — now $out$([[ $out == "$mem" ]] && echo " (as before)")" 2>/dev/null
+exit 0

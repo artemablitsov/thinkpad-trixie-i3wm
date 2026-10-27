@@ -92,7 +92,7 @@ hw_summary | sed 's/^/      /'
 
 # Свежие списки пакетов — при каждом запуске, с любыми --only/--skip
 info "Updating package lists (apt-get update)…"
-apt-get update -q || warn "apt-get update failed — the package lists may be stale; check the network and /etc/apt/sources.list.d/"
+apt_update     # недоступный сторонний репозиторий — предупреждение, а не остановка
 
 want() {
   local m="$1"

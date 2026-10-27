@@ -1,0 +1,227 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1408" height="524" viewBox="0 0 1408 524" role="img" aria-label="Neovim: your session in Nord, root in burgundy with a ROOT badge">
+<title>Neovim: your session in Nord, root in burgundy with a ROOT badge</title>
+<style>text{font-family:'JetBrains Mono','DejaVu Sans Mono',Menlo,Consolas,monospace;font-size:14px;white-space:pre}.cap{font-size:13px}</style>
+<rect width="1408" height="524" rx="12" fill="#242933"/>
+<rect x="17.0" y="17" width="674.0" height="460.0" rx="6" fill="#4C566A"/>
+<rect x="18.0" y="18" width="672.0" height="26" rx="5" fill="#3B4252"/>
+<text x="28.0" y="35" fill="#D8DEE9" class="cap">artem@cyberdeck ~ $ nvim /usr/local/sbin/charge-limits</text>
+<rect x="18.0" y="44" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="57.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs">  1 </text>
+<text x="68.4" y="57.5" fill="#616E88" textLength="159.6" lengthAdjust="spacingAndGlyphs">#!/usr/bin/env bash</text>
+<rect x="18.0" y="62" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="75.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs">  2 </text>
+<text x="68.4" y="75.5" fill="#616E88" textLength="344.4" lengthAdjust="spacingAndGlyphs"># Пороги заряда батареи ThinkPad: 75–85 %</text>
+<rect x="18.0" y="80" width="135.0" height="18.5" fill="#2E3440"/>
+<rect x="152.4" y="80" width="76.2" height="18.5" fill="#EBCB8B"/>
+<rect x="228.0" y="80" width="109.8" height="18.5" fill="#2E3440"/>
+<rect x="337.2" y="80" width="76.2" height="18.5" fill="#EBCB8B"/>
+<rect x="412.8" y="80" width="277.8" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="93.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs">  3 </text>
+<text x="68.4" y="93.5" fill="#D8DEE9" textLength="84.0" lengthAdjust="spacingAndGlyphs">BAT_START_</text>
+<text x="152.4" y="93.5" fill="#2E3440" textLength="75.6" lengthAdjust="spacingAndGlyphs">THRESHOLD</text>
+<text x="228.0" y="93.5" fill="#81A1C1" textLength="8.4" lengthAdjust="spacingAndGlyphs">=</text>
+<text x="236.4" y="93.5" fill="#A3BE8C" textLength="16.8" lengthAdjust="spacingAndGlyphs">&quot;&quot;</text>
+<text x="253.2" y="93.5" fill="#D8DEE9" textLength="84.0" lengthAdjust="spacingAndGlyphs"> BAT_STOP_</text>
+<text x="337.2" y="93.5" fill="#2E3440" textLength="75.6" lengthAdjust="spacingAndGlyphs">THRESHOLD</text>
+<text x="412.8" y="93.5" fill="#81A1C1" textLength="8.4" lengthAdjust="spacingAndGlyphs">=</text>
+<text x="421.2" y="93.5" fill="#A3BE8C" textLength="16.8" lengthAdjust="spacingAndGlyphs">&quot;&quot;</text>
+<rect x="18.0" y="98" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="111.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs">  4 </text>
+<text x="68.4" y="111.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">[[</text>
+<text x="85.2" y="111.5" fill="#D8DEE9" textLength="252.0" lengthAdjust="spacingAndGlyphs"> -r /etc/cyberdeck/power.conf </text>
+<text x="337.2" y="111.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">]]</text>
+<text x="362.4" y="111.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="387.6" y="111.5" fill="#81A1C1" textLength="50.4" lengthAdjust="spacingAndGlyphs">source</text>
+<text x="438.0" y="111.5" fill="#D8DEE9" textLength="252.0" lengthAdjust="spacingAndGlyphs"> /etc/cyberdeck/power.conf    </text>
+<rect x="18.0" y="116" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="129.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs">  5 </text>
+<text x="68.4" y="129.5" fill="#81A1C1" textLength="25.2" lengthAdjust="spacingAndGlyphs">for</text>
+<text x="93.6" y="129.5" fill="#D8DEE9" textLength="25.2" lengthAdjust="spacingAndGlyphs"> b </text>
+<text x="118.8" y="129.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">in</text>
+<text x="135.6" y="129.5" fill="#D8DEE9" textLength="235.2" lengthAdjust="spacingAndGlyphs"> /sys/class/power_supply/BAT</text>
+<text x="370.8" y="129.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">*;</text>
+<text x="396.0" y="129.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">do</text>
+<rect x="18.0" y="134" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="147.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs">  6 </text>
+<text x="68.4" y="147.5" fill="#D8DEE9" textLength="42.0" lengthAdjust="spacingAndGlyphs">  end</text>
+<text x="110.4" y="147.5" fill="#81A1C1" textLength="25.2" lengthAdjust="spacingAndGlyphs">=$b</text>
+<text x="135.6" y="147.5" fill="#D8DEE9" textLength="554.4" lengthAdjust="spacingAndGlyphs">/charge_control_end_threshold                                     </text>
+<rect x="18.0" y="152" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="165.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs">  7 </text>
+<text x="68.4" y="165.5" fill="#D8DEE9" textLength="58.8" lengthAdjust="spacingAndGlyphs">  start</text>
+<text x="127.2" y="165.5" fill="#81A1C1" textLength="25.2" lengthAdjust="spacingAndGlyphs">=$b</text>
+<text x="152.4" y="165.5" fill="#D8DEE9" textLength="537.6" lengthAdjust="spacingAndGlyphs">/charge_control_start_threshold                                 </text>
+<rect x="18.0" y="170" width="210.6" height="18.5" fill="#2E3440"/>
+<rect x="228.0" y="170" width="76.2" height="18.5" fill="#EBCB8B"/>
+<rect x="303.6" y="170" width="387.0" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="183.5" fill="#D8DEE9" font-weight="700" textLength="33.6" lengthAdjust="spacingAndGlyphs">  8 </text>
+<text x="85.2" y="183.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">[[</text>
+<text x="102.0" y="183.5" fill="#D8DEE9" textLength="33.6" lengthAdjust="spacingAndGlyphs"> -n </text>
+<text x="135.6" y="183.5" fill="#A3BE8C" textLength="92.4" lengthAdjust="spacingAndGlyphs">&quot;$BAT_STOP_</text>
+<text x="228.0" y="183.5" fill="#2E3440" textLength="75.6" lengthAdjust="spacingAndGlyphs">THRESHOLD</text>
+<text x="303.6" y="183.5" fill="#A3BE8C" textLength="8.4" lengthAdjust="spacingAndGlyphs">&quot;</text>
+<text x="320.4" y="183.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="337.2" y="183.5" fill="#D8DEE9" textLength="33.6" lengthAdjust="spacingAndGlyphs"> -w </text>
+<text x="370.8" y="183.5" fill="#81A1C1" textLength="33.6" lengthAdjust="spacingAndGlyphs">$end</text>
+<text x="412.8" y="183.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">]]</text>
+<text x="438.0" y="183.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="463.2" y="183.5" fill="#81A1C1" textLength="33.6" lengthAdjust="spacingAndGlyphs">echo</text>
+<text x="505.2" y="183.5" fill="#B48EAD" textLength="16.8" lengthAdjust="spacingAndGlyphs">85</text>
+<text x="530.4" y="183.5" fill="#81A1C1" textLength="8.4" lengthAdjust="spacingAndGlyphs">&gt;</text>
+<text x="547.2" y="183.5" fill="#A3BE8C" textLength="50.4" lengthAdjust="spacingAndGlyphs">&quot;$end&quot;</text>
+<rect x="18.0" y="188" width="219.0" height="18.5" fill="#2E3440"/>
+<rect x="236.4" y="188" width="76.2" height="18.5" fill="#EBCB8B"/>
+<rect x="312.0" y="188" width="378.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="201.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs">  9 </text>
+<text x="85.2" y="201.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">[[</text>
+<text x="102.0" y="201.5" fill="#D8DEE9" textLength="33.6" lengthAdjust="spacingAndGlyphs"> -n </text>
+<text x="135.6" y="201.5" fill="#A3BE8C" textLength="100.8" lengthAdjust="spacingAndGlyphs">&quot;$BAT_START_</text>
+<text x="236.4" y="201.5" fill="#2E3440" textLength="75.6" lengthAdjust="spacingAndGlyphs">THRESHOLD</text>
+<text x="312.0" y="201.5" fill="#A3BE8C" textLength="8.4" lengthAdjust="spacingAndGlyphs">&quot;</text>
+<text x="328.8" y="201.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="345.6" y="201.5" fill="#D8DEE9" textLength="33.6" lengthAdjust="spacingAndGlyphs"> -w </text>
+<text x="379.2" y="201.5" fill="#81A1C1" textLength="50.4" lengthAdjust="spacingAndGlyphs">$start</text>
+<text x="438.0" y="201.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">]]</text>
+<text x="463.2" y="201.5" fill="#81A1C1" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="488.4" y="201.5" fill="#81A1C1" textLength="33.6" lengthAdjust="spacingAndGlyphs">echo</text>
+<text x="530.4" y="201.5" fill="#B48EAD" textLength="16.8" lengthAdjust="spacingAndGlyphs">75</text>
+<text x="555.6" y="201.5" fill="#81A1C1" textLength="8.4" lengthAdjust="spacingAndGlyphs">&gt;</text>
+<text x="572.4" y="201.5" fill="#A3BE8C" textLength="67.2" lengthAdjust="spacingAndGlyphs">&quot;$start&quot;</text>
+<rect x="18.0" y="206" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="219.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs"> 10 </text>
+<text x="68.4" y="219.5" fill="#81A1C1" textLength="33.6" lengthAdjust="spacingAndGlyphs">done</text>
+<rect x="18.0" y="224" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="34.8" y="237.5" fill="#4C566A" textLength="33.6" lengthAdjust="spacingAndGlyphs"> 11 </text>
+<text x="68.4" y="237.5" fill="#81A1C1" textLength="33.6" lengthAdjust="spacingAndGlyphs">exit</text>
+<text x="110.4" y="237.5" fill="#B48EAD" textLength="8.4" lengthAdjust="spacingAndGlyphs">0</text>
+<rect x="18.0" y="242" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="260" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="278" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="296" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="314" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="332" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="350" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="368" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="386" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="404" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="422" width="672.6" height="18.5" fill="#2E3440"/>
+<rect x="18.0" y="440" width="67.8" height="18.5" fill="#88C0D0"/>
+<rect x="85.2" y="440" width="605.4" height="18.5" fill="#3B4252"/>
+<text x="18.0" y="453.5" fill="#3B4252" font-weight="700" textLength="67.2" lengthAdjust="spacingAndGlyphs"> NORMAL </text>
+<text x="85.2" y="453.5" fill="#E5E9F0" textLength="604.8" lengthAdjust="spacingAndGlyphs"> │ /usr/local/sbin/charge-limits                        sh │ 72% │  8:3 </text>
+<rect x="18.0" y="458" width="672.6" height="18.5" fill="#2E3440"/>
+<text x="18.0" y="471.5" fill="#D8DEE9" textLength="672.0" lengthAdjust="spacingAndGlyphs">/THRESHOLD                                                            [2/4]     </text>
+<text x="354.0" y="498.0" fill="#4C566A" class="cap" text-anchor="middle" font-weight="700">you — Nord</text>
+<rect x="717.0" y="17" width="674.0" height="460.0" rx="6" fill="#A23B55"/>
+<rect x="718.0" y="18" width="672.0" height="26" rx="5" fill="#3B4252"/>
+<text x="728.0" y="35" fill="#D8DEE9" class="cap">artem@cyberdeck ~ $ sudo nvim /usr/local/sbin/charge-limits</text>
+<rect x="718.0" y="44" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="57.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs">  1 </text>
+<text x="768.4" y="57.5" fill="#8F6B78" textLength="159.6" lengthAdjust="spacingAndGlyphs">#!/usr/bin/env bash</text>
+<rect x="718.0" y="62" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="75.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs">  2 </text>
+<text x="768.4" y="75.5" fill="#8F6B78" textLength="344.4" lengthAdjust="spacingAndGlyphs"># Пороги заряда батареи ThinkPad: 75–85 %</text>
+<rect x="718.0" y="80" width="135.0" height="18.5" fill="#2B1D23"/>
+<rect x="852.4" y="80" width="76.2" height="18.5" fill="#EBCB8B"/>
+<rect x="928.0" y="80" width="109.8" height="18.5" fill="#2B1D23"/>
+<rect x="1037.2" y="80" width="76.2" height="18.5" fill="#EBCB8B"/>
+<rect x="1112.8" y="80" width="277.8" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="93.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs">  3 </text>
+<text x="768.4" y="93.5" fill="#D8DEE9" textLength="84.0" lengthAdjust="spacingAndGlyphs">BAT_START_</text>
+<text x="852.4" y="93.5" fill="#2B1D23" textLength="75.6" lengthAdjust="spacingAndGlyphs">THRESHOLD</text>
+<text x="928.0" y="93.5" fill="#C9677A" textLength="8.4" lengthAdjust="spacingAndGlyphs">=</text>
+<text x="936.4" y="93.5" fill="#A3BE8C" textLength="16.8" lengthAdjust="spacingAndGlyphs">&quot;&quot;</text>
+<text x="953.2" y="93.5" fill="#D8DEE9" textLength="84.0" lengthAdjust="spacingAndGlyphs"> BAT_STOP_</text>
+<text x="1037.2" y="93.5" fill="#2B1D23" textLength="75.6" lengthAdjust="spacingAndGlyphs">THRESHOLD</text>
+<text x="1112.8" y="93.5" fill="#C9677A" textLength="8.4" lengthAdjust="spacingAndGlyphs">=</text>
+<text x="1121.2" y="93.5" fill="#A3BE8C" textLength="16.8" lengthAdjust="spacingAndGlyphs">&quot;&quot;</text>
+<rect x="718.0" y="98" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="111.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs">  4 </text>
+<text x="768.4" y="111.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">[[</text>
+<text x="785.2" y="111.5" fill="#D8DEE9" textLength="252.0" lengthAdjust="spacingAndGlyphs"> -r /etc/cyberdeck/power.conf </text>
+<text x="1037.2" y="111.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">]]</text>
+<text x="1062.4" y="111.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="1087.6" y="111.5" fill="#C9677A" textLength="50.4" lengthAdjust="spacingAndGlyphs">source</text>
+<text x="1138.0" y="111.5" fill="#D8DEE9" textLength="252.0" lengthAdjust="spacingAndGlyphs"> /etc/cyberdeck/power.conf    </text>
+<rect x="718.0" y="116" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="129.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs">  5 </text>
+<text x="768.4" y="129.5" fill="#C9677A" textLength="25.2" lengthAdjust="spacingAndGlyphs">for</text>
+<text x="793.6" y="129.5" fill="#D8DEE9" textLength="25.2" lengthAdjust="spacingAndGlyphs"> b </text>
+<text x="818.8" y="129.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">in</text>
+<text x="835.6" y="129.5" fill="#D8DEE9" textLength="235.2" lengthAdjust="spacingAndGlyphs"> /sys/class/power_supply/BAT</text>
+<text x="1070.8" y="129.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">*;</text>
+<text x="1096.0" y="129.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">do</text>
+<rect x="718.0" y="134" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="147.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs">  6 </text>
+<text x="768.4" y="147.5" fill="#D8DEE9" textLength="42.0" lengthAdjust="spacingAndGlyphs">  end</text>
+<text x="810.4" y="147.5" fill="#C9677A" textLength="25.2" lengthAdjust="spacingAndGlyphs">=$b</text>
+<text x="835.6" y="147.5" fill="#D8DEE9" textLength="554.4" lengthAdjust="spacingAndGlyphs">/charge_control_end_threshold                                     </text>
+<rect x="718.0" y="152" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="165.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs">  7 </text>
+<text x="768.4" y="165.5" fill="#D8DEE9" textLength="58.8" lengthAdjust="spacingAndGlyphs">  start</text>
+<text x="827.2" y="165.5" fill="#C9677A" textLength="25.2" lengthAdjust="spacingAndGlyphs">=$b</text>
+<text x="852.4" y="165.5" fill="#D8DEE9" textLength="537.6" lengthAdjust="spacingAndGlyphs">/charge_control_start_threshold                                 </text>
+<rect x="718.0" y="170" width="210.6" height="18.5" fill="#2B1D23"/>
+<rect x="928.0" y="170" width="76.2" height="18.5" fill="#EBCB8B"/>
+<rect x="1003.6" y="170" width="387.0" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="183.5" fill="#E08A97" font-weight="700" textLength="33.6" lengthAdjust="spacingAndGlyphs">  8 </text>
+<text x="785.2" y="183.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">[[</text>
+<text x="802.0" y="183.5" fill="#D8DEE9" textLength="33.6" lengthAdjust="spacingAndGlyphs"> -n </text>
+<text x="835.6" y="183.5" fill="#A3BE8C" textLength="92.4" lengthAdjust="spacingAndGlyphs">&quot;$BAT_STOP_</text>
+<text x="928.0" y="183.5" fill="#2B1D23" textLength="75.6" lengthAdjust="spacingAndGlyphs">THRESHOLD</text>
+<text x="1003.6" y="183.5" fill="#A3BE8C" textLength="8.4" lengthAdjust="spacingAndGlyphs">&quot;</text>
+<text x="1020.4" y="183.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="1037.2" y="183.5" fill="#D8DEE9" textLength="33.6" lengthAdjust="spacingAndGlyphs"> -w </text>
+<text x="1070.8" y="183.5" fill="#C9677A" textLength="33.6" lengthAdjust="spacingAndGlyphs">$end</text>
+<text x="1112.8" y="183.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">]]</text>
+<text x="1138.0" y="183.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="1163.2" y="183.5" fill="#C9677A" textLength="33.6" lengthAdjust="spacingAndGlyphs">echo</text>
+<text x="1205.2" y="183.5" fill="#B48EAD" textLength="16.8" lengthAdjust="spacingAndGlyphs">85</text>
+<text x="1230.4" y="183.5" fill="#C9677A" textLength="8.4" lengthAdjust="spacingAndGlyphs">&gt;</text>
+<text x="1247.2" y="183.5" fill="#A3BE8C" textLength="50.4" lengthAdjust="spacingAndGlyphs">&quot;$end&quot;</text>
+<rect x="718.0" y="188" width="219.0" height="18.5" fill="#2B1D23"/>
+<rect x="936.4" y="188" width="76.2" height="18.5" fill="#EBCB8B"/>
+<rect x="1012.0" y="188" width="378.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="201.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs">  9 </text>
+<text x="785.2" y="201.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">[[</text>
+<text x="802.0" y="201.5" fill="#D8DEE9" textLength="33.6" lengthAdjust="spacingAndGlyphs"> -n </text>
+<text x="835.6" y="201.5" fill="#A3BE8C" textLength="100.8" lengthAdjust="spacingAndGlyphs">&quot;$BAT_START_</text>
+<text x="936.4" y="201.5" fill="#2B1D23" textLength="75.6" lengthAdjust="spacingAndGlyphs">THRESHOLD</text>
+<text x="1012.0" y="201.5" fill="#A3BE8C" textLength="8.4" lengthAdjust="spacingAndGlyphs">&quot;</text>
+<text x="1028.8" y="201.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="1045.6" y="201.5" fill="#D8DEE9" textLength="33.6" lengthAdjust="spacingAndGlyphs"> -w </text>
+<text x="1079.2" y="201.5" fill="#C9677A" textLength="50.4" lengthAdjust="spacingAndGlyphs">$start</text>
+<text x="1138.0" y="201.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">]]</text>
+<text x="1163.2" y="201.5" fill="#C9677A" textLength="16.8" lengthAdjust="spacingAndGlyphs">&amp;&amp;</text>
+<text x="1188.4" y="201.5" fill="#C9677A" textLength="33.6" lengthAdjust="spacingAndGlyphs">echo</text>
+<text x="1230.4" y="201.5" fill="#B48EAD" textLength="16.8" lengthAdjust="spacingAndGlyphs">75</text>
+<text x="1255.6" y="201.5" fill="#C9677A" textLength="8.4" lengthAdjust="spacingAndGlyphs">&gt;</text>
+<text x="1272.4" y="201.5" fill="#A3BE8C" textLength="67.2" lengthAdjust="spacingAndGlyphs">&quot;$start&quot;</text>
+<rect x="718.0" y="206" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="219.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs"> 10 </text>
+<text x="768.4" y="219.5" fill="#C9677A" textLength="33.6" lengthAdjust="spacingAndGlyphs">done</text>
+<rect x="718.0" y="224" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="734.8" y="237.5" fill="#6B4655" textLength="33.6" lengthAdjust="spacingAndGlyphs"> 11 </text>
+<text x="768.4" y="237.5" fill="#C9677A" textLength="33.6" lengthAdjust="spacingAndGlyphs">exit</text>
+<text x="810.4" y="237.5" fill="#B48EAD" textLength="8.4" lengthAdjust="spacingAndGlyphs">0</text>
+<rect x="718.0" y="242" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="260" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="278" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="296" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="314" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="332" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="350" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="368" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="386" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="404" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="422" width="672.6" height="18.5" fill="#2B1D23"/>
+<rect x="718.0" y="440" width="51.0" height="18.5" fill="#7A1F35"/>
+<rect x="768.4" y="440" width="67.8" height="18.5" fill="#E08A97"/>
+<rect x="835.6" y="440" width="555.0" height="18.5" fill="#3A262E"/>
+<text x="718.0" y="453.5" fill="#ECEFF4" font-weight="700" textLength="50.4" lengthAdjust="spacingAndGlyphs"> ROOT </text>
+<text x="768.4" y="453.5" fill="#2B1D23" font-weight="700" textLength="67.2" lengthAdjust="spacingAndGlyphs"> NORMAL </text>
+<text x="835.6" y="453.5" fill="#E5E9F0" textLength="554.4" lengthAdjust="spacingAndGlyphs"> /usr/local/sbin/charge-limits                     [sh]  8:3  72% </text>
+<rect x="718.0" y="458" width="672.6" height="18.5" fill="#2B1D23"/>
+<text x="718.0" y="471.5" fill="#D8DEE9" textLength="672.0" lengthAdjust="spacingAndGlyphs">/THRESHOLD                                                            [2/4]     </text>
+<text x="1054.0" y="498.0" fill="#A23B55" class="cap" text-anchor="middle" font-weight="700">root — Nord Root</text>
+</svg>

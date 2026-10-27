@@ -10,6 +10,7 @@ cp "$CYBERDECK_DIR/system/boot/grub/themes/cyberdeck/theme.txt" "$THEME_DIR/them
 
 # Фон — в разрешении встроенного экрана (hardware.conf), шрифты и отступы — по
 # масштабу интерфейса: на 2.8K/4K меню не мелкое. PNG генерируются на Python.
+# Видеорежим GRUB не меняет (см. GRUB_GFXMODE) — фон растягивается под любой.
 GW=1920 GH=1080
 [[ ${HW_PANEL:-} =~ ^([0-9]+)x([0-9]+)$ ]] && GW=${BASH_REMATCH[1]} GH=${BASH_REMATCH[2]}
 S=${HW_SCALE:-100}
@@ -54,9 +55,14 @@ set_grub() {
     echo "${k}=${v}" >> /etc/default/grub
   fi
 }
-set_grub GRUB_TIMEOUT 3
+# 5 с: внешний монитор (крышка закрыта, док) после логотипа прошивки ловит
+# сигнал 1–2 с, и при 3 с меню было видно всего секунду
+set_grub GRUB_TIMEOUT 5
 set_grub GRUB_TIMEOUT_STYLE menu
-set_grub GRUB_GFXMODE "${GW}x${GH},auto"
+# Видеорежим — тот, что выставила прошивка («auto»: GRUB берёт текущий/родной режим
+# GOP). Явный «WxH» заставлял GRUB переключать режим: экран на миг гас и
+# заново ловил сигнал (внешний монитор — на пару секунд), меню «мигало».
+set_grub GRUB_GFXMODE auto
 set_grub GRUB_GFXPAYLOAD_LINUX keep
 set_grub GRUB_TERMINAL_OUTPUT gfxterm
 set_grub GRUB_THEME "\"$THEME_DIR/theme.txt\""
@@ -73,17 +79,22 @@ grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub || echo 'GRUB_CMDLINE_L
 #   udev.log_level=3             — без сообщений udev
 #   vt.global_cursor_default=0   — без мигающего курсора
 #   logo.nologo                  — без пингвинов
-#   fbcon=nodefer                — консоль сразу перерисовывает экран в чёрный,
-#                                  а не держит картинку прошивки/GRUB
+# Консоль ядра не перехватывает экран сразу (без fbcon=nodefer): после выбора
+# пункта остаётся фон темы GRUB (тёмный Nord с полосой внизу), пока драйвер
+# графики не загрузится и plymouth не покажет кубы. С fbcon=nodefer экран на
+# эти 2–3 секунды становился чёрным — выглядело как «погас».
 # Заставка — plymouth с темой cubes-nord (см. ниже).
 for p in quiet loglevel=3 systemd.show_status=false rd.systemd.show_status=false \
-         rd.udev.log_level=3 udev.log_level=3 vt.global_cursor_default=0 logo.nologo \
-         fbcon=nodefer; do
+         rd.udev.log_level=3 udev.log_level=3 vt.global_cursor_default=0 logo.nologo; do
   grub_cmdline_add "$p"
 done
+grub_cmdline_del fbcon
 # AMD: amd-pstate в режиме EPP (профили power-profiles-daemon управляют им напрямую).
 # Intel: intel_pstate включён по умолчанию — параметр не нужен.
 if [[ $HW_CPU == amd ]]; then grub_cmdline_add amd_pstate=active; else grub_cmdline_del amd_pstate; fi
+# Intel: драйвер подхватывает режим, выставленный прошивкой, без полного
+# переключения (fastboot) — меньше «миганий» экрана между GRUB и заставкой
+if [[ ${HW_GPU_KMOD:-} == i915 ]]; then grub_cmdline_add i915.fastboot=1; else grub_cmdline_del i915.fastboot; fi
 # Палитра Nord для текстовых консолей — прямо в ядре (vt.default_red/grn/blu).
 # setvtrgb держится только до первого сброса: при выходе plymouth и X ядро
 # возвращает консоли палитру по умолчанию, и tuigreet рисовался ярко-синим VGA.
@@ -131,6 +142,12 @@ else
   # (Ctrl+Alt+F12), чтобы даже в мгновения до/после plymouth экран был чистым
   grub_cmdline_add console=tty12
 fi
+# plymouth считает «последовательной» любую консоль ядра, кроме tty0/tty1, —
+# в том числе tty12 — и для неё принудительно включает текстовый режим
+# («serial consoles detected, managing them with details forced»): вместо
+# заставки на экран шёл журнал загрузки и выключения. Этот параметр велит
+# plymouth не трогать такие консоли и рисовать заставку на экране.
+grub_cmdline_add plymouth.ignore-serial-consoles
 
 # GRUB перед загрузкой ядра пишет «Loading Linux …» и «Loading initial ramdisk …».
 # Убираем эти строки из генератора меню. Файл — conffile пакета grub-common:
@@ -148,4 +165,4 @@ printf 'kernel.printk = 3 3 3 3\n' > /etc/sysctl.d/20-cyberdeck-quiet.conf
 
 update-grub
 if [[ -n "${CD_NEED_INITRAMFS:-}" ]]; then update-initramfs -u -k all; fi
-ok "GRUB: Nord theme, ${GW}x${GH} at ${S} %, Nord console palette"
+ok "GRUB: Nord theme (firmware video mode, scale ${S} %), Nord console palette"

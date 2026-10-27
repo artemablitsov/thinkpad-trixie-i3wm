@@ -96,3 +96,8 @@ if visudo -cf "$CYBERDECK_DIR/system/etc/sudoers.d/cyberdeck-proxy" >/dev/null 2
 else
   warn "sudoers: cyberdeck-proxy failed validation — not installed"
 fi
+if visudo -cf "$CYBERDECK_DIR/system/etc/sudoers.d/cyberdeck-root" >/dev/null 2>&1; then
+  install_sys etc/sudoers.d/cyberdeck-root 0440
+else
+  warn "sudoers: cyberdeck-root failed validation — not installed"
+fi

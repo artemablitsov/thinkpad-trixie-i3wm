@@ -1,0 +1,40 @@
+# Cyberdeck: зеркала Debian, среди которых установщик выбирает самое быстрое
+# (cyberdeck-mirror). Одно зеркало — одна строка, адрес до каталога debian.
+# Список — с https://www.debian.org/mirror/list (Россия и соседние страны) плюс
+# CDN deb.debian.org. Добавьте своё зеркало и запустите: sudo cyberdeck-mirror
+
+# CDN Debian (Fastly): сам отдаёт с ближайшего узла
+http://deb.debian.org/debian
+
+# Россия
+http://ftp.ru.debian.org/debian
+http://mirror.yandex.ru/debian
+http://mirror.truenetwork.ru/debian
+http://mirror.mephi.ru/debian
+http://mirror.kpfu.ru/debian
+http://ftp.psn.ru/debian
+http://mirror.corbina.net/debian
+http://mirror.neftm.ru/debian
+http://mirrors.powernet.com.ru/debian
+http://repository.su/debian
+
+# Беларусь, Казахстан
+http://ftp.by.debian.org/debian
+http://mirror.datacenter.by/debian
+http://mirror.hoster.kz/debian
+http://mirror.ps.kz/debian
+
+# Финляндия, Швеция, Прибалтика, Польша
+http://ftp.fi.debian.org/debian
+http://www.nic.funet.fi/debian
+http://ftp.se.debian.org/debian
+http://ftp.acc.umu.se/debian
+http://mirror.cloudhosting.lv/debian
+http://mirrors.xtom.ee/debian
+http://ftp.pl.debian.org/debian
+
+# Германия, Нидерланды
+http://ftp.de.debian.org/debian
+http://ftp2.de.debian.org/debian
+http://mirrors.xtom.de/debian
+http://ftp.nl.debian.org/debian

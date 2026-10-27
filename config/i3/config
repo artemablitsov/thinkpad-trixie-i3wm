@@ -39,13 +39,17 @@ mouse_warping none
 floating_modifier $mod
 tiling_drag modifier titlebar
 workspace_auto_back_and_forth yes
+# Новый рабочий стол 1 (после перезапуска i3 и т. п.) — на основном мониторе
+workspace 1 output primary
 
 # ── Автозапуск ───────────────────────────────
 exec --no-startup-id cyberdeck-xsettingsd
 exec --no-startup-id picom --config ~/.config/picom/picom.conf
 exec --no-startup-id dunst
 exec --no-startup-id cyberdeck-polkit
-exec --no-startup-id feh --no-fehbg --bg-fill ~/.local/share/cyberdeck/wallpaper.png
+# Обои и панели — заново при каждом изменении экранов (поворот, разрешение,
+# мониторы); монитор, выдернутый во время простоя, — раскладка заново
+exec_always --no-startup-id cyberdeck-screen-watch
 # Блокировка по сигналу logind (простой, крышка, Win+Esc). Не xss-lock: тот
 # запирал экран при каждом гашении экрана (xset dpms force off), то есть сразу
 # при закрытии крышки, а не через минуту. Перед сном — хук systemd-sleep.
@@ -56,7 +60,10 @@ exec --no-startup-id cyberdeck-lockd
 exec --no-startup-id systemd-inhibit --what=handle-power-key --mode=block --who=i3 --why="Power button opens the power menu" xprop -spy -root _NET_SUPPORTING_WM_CHECK >/dev/null
 exec --no-startup-id cyberdeck-idle
 exec_always --no-startup-id ~/.config/polybar/launch.sh
-exec --no-startup-id sh -c 'autorandr --change --default horizontal; cyberdeck-primary'
+# Рабочий стол 1 — на основном мониторе. i3 при запуске отдаёт его первому
+# монитору по порядку RandR, а основной назначается позже (autorandr,
+# cyberdeck-primary) — поэтому после этого переносим его явно.
+exec --no-startup-id sh -c 'autorandr --change --default horizontal; cyberdeck-primary; i3-msg -q "workspace number 1; move workspace to output primary; workspace number 1"'
 exec --no-startup-id cyberdeck-thermal
 exec --no-startup-id udiskie
 exec --no-startup-id cyberdeck-proxyd
@@ -87,6 +94,7 @@ for_window [class="^Polkit-mate-authentication-agent-1$"] floating enable, move 
 for_window [class="^Yad$|^Zenity$"] floating enable, move position center
 # Flameshot: окна (выделение, настройки) — плавающие, без рамки i3
 for_window [class="^flameshot$"] floating enable, border none
+for_window [class="^Arandr$"] floating enable, border pixel 2, resize set 50 ppt 55 ppt, move position center
 for_window [class="^app\.hiddify\.com$"] floating enable, border pixel 2, resize set 25 ppt 76 ppt, move position center
 
 # ── Приложения ───────────────────────────────
@@ -105,6 +113,8 @@ bindsym $mod+Shift+n      exec --no-startup-id $popup network nmtui
 bindsym $mod+Shift+b      exec --no-startup-id $popup bluetooth cyberdeck-bt-tui
 bindsym $mod+Shift+a      exec --no-startup-id $popup audio pulsemixer
 bindsym $mod+Shift+Escape exec --no-startup-id $popup htop htop
+# Мониторы: расположение, поворот, разрешение, основной — и запомнить раскладку
+bindsym $mod+Shift+p      exec --no-startup-id cyberdeck-displays
 bindsym $mod+Shift+m      exec $term --class cyberdeck-music -e cmus
 
 # ── Окна ─────────────────────────────────────
@@ -134,6 +144,13 @@ bindsym $mod+g layout tabbed
 bindsym $mod+f fullscreen toggle
 bindsym $mod+Shift+space floating toggle
 bindsym $mod+Ctrl+space focus mode_toggle
+# Рабочий стол целиком — на соседний монитор (со всеми окнами)
+bindsym $mod+Ctrl+Shift+Left   move workspace to output left
+bindsym $mod+Ctrl+Shift+Right  move workspace to output right
+bindsym $mod+Ctrl+Shift+Up     move workspace to output up
+bindsym $mod+Ctrl+Shift+Down   move workspace to output down
+bindsym $mod+Ctrl+Shift+h      move workspace to output left
+bindsym $mod+Ctrl+Shift+l      move workspace to output right
 bindsym $mod+a focus parent
 bindsym $mod+minus scratchpad show
 bindsym $mod+Shift+minus move scratchpad

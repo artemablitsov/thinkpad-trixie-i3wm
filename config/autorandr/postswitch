@@ -14,7 +14,8 @@ in_session() { # in_session <команда> — запустить через i
   i3-msg -q exec --no-startup-id "$1" 2>/dev/null || sh -c "$1" >/dev/null 2>&1 &
 }
 
-# Основной монитор: внешний, если есть, иначе встроенный (там — всплывающие окна панели).
+# Основной монитор: сохранённый в профиле или выбранный (cyberdeck-displays), иначе
+# самый большой внешний; встроенный — последним (там — всплывающие окна панели).
 # xrandr работает с любым процессом, у которого есть DISPLAY, — сессия не нужна.
 cyberdeck-primary
 feh --no-fehbg --bg-fill "$HOME/.local/share/cyberdeck/wallpaper.png" 2>/dev/null

@@ -33,7 +33,7 @@ FORMATS=""
 for cand in "$lang2" "${MAIN_LANG[$FORMATS_COUNTRY]:-}" "${FORMATS_COUNTRY,,}"; do
   [[ -n $cand ]] && supported "${cand}_${FORMATS_COUNTRY}.UTF-8" && { FORMATS="${cand}_${FORMATS_COUNTRY}.UTF-8"; break; }
 done
-[[ -n $FORMATS ]] || FORMATS=$(grep -E "^[a-z]{2,3}_${FORMATS_COUNTRY}\.UTF-8 UTF-8$" "$SUPPORTED" 2>/dev/null | head -n1 | cut -d' ' -f1)
+[[ -n $FORMATS ]] || FORMATS=$(grep -E "^[a-z]{2,3}_${FORMATS_COUNTRY}\.UTF-8 UTF-8$" "$SUPPORTED" 2>/dev/null | head -n1 | cut -d' ' -f1 || true)
 [[ -n $FORMATS ]] || FORMATS=$LANG_LOCALE
 
 # Раскладки: us + выбранная (us → us,ru). «de(nodeadkeys)» → раскладка de, вариант nodeadkeys
