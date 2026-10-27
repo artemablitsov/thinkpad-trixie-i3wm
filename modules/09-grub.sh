@@ -30,8 +30,11 @@ bold=$(fc-match -f '%{file}' 'JetBrains Mono:style=Bold')
 [[ -f "$ttf" ]] || ttf=$(fc-match -f '%{file}' 'DejaVu Sans Mono')
 [[ -f "$bold" ]] || bold="$ttf"
 rm -f "$THEME_DIR"/mono-*.pf2
-for s in 16 20 24; do grub-mkfont -s "$(gs $s)" -n "Cyberdeck Mono" -o "$THEME_DIR/mono-$(gs $s).pf2" "$ttf"; done
-grub-mkfont -s "$(gs 48)" -n "Cyberdeck Display" -o "$THEME_DIR/mono-bold-$(gs 48).pf2" "$bold"
+# grub-mkfont ругается «unsupported font feature parameters» на таблицы OpenType,
+# которые GRUB не использует (у JetBrains Mono их много), — не ошибка, прячем
+mkfont() { grub-mkfont "$@" 2> >(grep -v 'unsupported font feature' >&2 || true); }
+for s in 16 20 24; do mkfont -s "$(gs $s)" -n "Cyberdeck Mono" -o "$THEME_DIR/mono-$(gs $s).pf2" "$ttf"; done
+mkfont -s "$(gs 48)" -n "Cyberdeck Display" -o "$THEME_DIR/mono-bold-$(gs 48).pf2" "$bold"
 # Размеры в theme.txt: шрифты («… Regular 20»), высоты пунктов и отступы в пикселях
 if (( S != 100 )); then
   python3 -I - "$THEME_DIR/theme.txt" "$S" <<'PYEOF'

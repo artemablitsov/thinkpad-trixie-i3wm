@@ -200,8 +200,10 @@ bold=$(fc-match -f '%{file}' 'JetBrains Mono:style=Bold' 2>/dev/null || true)
 [[ -f $ttf ]] || ttf=$(fc-match -f '%{file}' 'DejaVu Sans Mono' 2>/dev/null || true)
 [[ -f $bold ]] || bold=$ttf
 if command -v grub-mkfont >/dev/null && [[ -f $ttf ]]; then
-  for s in 16 20; do grub-mkfont -s "$s" -n "Cyberdeck Mono" -o "$th/mono-$s.pf2" "$ttf"; done
-  grub-mkfont -s 48 -n "Cyberdeck Display" -o "$th/mono-bold-48.pf2" "$bold"
+  # «unsupported font feature parameters» — таблицы OpenType, которые GRUB не использует
+  mkfont() { grub-mkfont "$@" 2> >(grep -v 'unsupported font feature' >&2 || true); }
+  for s in 16 20; do mkfont -s "$s" -n "Cyberdeck Mono" -o "$th/mono-$s.pf2" "$ttf"; done
+  mkfont -s 48 -n "Cyberdeck Display" -o "$th/mono-bold-48.pf2" "$bold"
   sed -i 's/"debian · trixie"/"installer · debian trixie"/' "$th/theme.txt"
 else
   say "  (no grub-mkfont — the menu uses Debian's Unifont)"
