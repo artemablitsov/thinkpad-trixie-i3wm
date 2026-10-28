@@ -1,6 +1,7 @@
 # CYBERDECK · udiskie — флешки и внешние диски монтируются сами
 # (в /media/$USER/<метка>), уведомление — через dunst. Отключить перед
-# извлечением: rofi → «Eject» или `udiskie-umount -a`.
+# извлечением: «USB:» на панели (или rofi → «Eject») — меню, каждая флешка
+# извлекается отдельно (cyberdeck-usb).
 program_options:
   automount: true
   notify: true

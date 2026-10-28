@@ -48,7 +48,7 @@ The volume and brightness keys show a thin bar at the bottom of the primary moni
 
 ## Polybar (left to right)
 
-`workspaces` · … · `weekday, date, time` · … · `network` `bluetooth` `VOL:` `CPU/RAM:` `t°` `EN/RU` `battery · time left · profile`
+`workspaces` · … · `weekday, date, time` · … · `USB:` (only with a drive in) `network` `bluetooth` `VOL:` `CPU/RAM:` `t°` `EN/RU` `battery · time left · profile`
 
 Text labels instead of icons; only the network, Bluetooth, the temperature and the battery keep an icon. Bluetooth shows the connected device name, or `---` when nothing is connected (a grey crossed-out icon when the adapter is off). The network shows the Wi-Fi (or Ethernet) icon and the connection name, without signal strength (no connection — a red crossed-out icon and `---`). The battery percentage turns red below 20 %. The battery shows the estimated time left (or `full in …` while charging) and the power profile as text: `power-saver` green, `balanced` yellow, `performance` red. The clock is centred in the free space between the workspaces and the right side, so a long right side never covers it.
 
@@ -109,7 +109,7 @@ One wallpaper: **ai-ecosystem** — an "AI Ecosystem" diagram in chalk on a dark
 
 ## USB drives, clipboard, emoji, calculator
 
-- **USB sticks and external drives** are mounted automatically in `/media/$USER/<label>`; the notification has an "open" button (mc in that directory). Copy progress to them is honest: at most 32 MB of a USB drive's or SD card's data waits in memory (instead of up to 1 GB), so the copy goes at the stick's real speed and 100 % means the data is on it. Before unplugging, still: rofi → "Eject" or `udiskie-umount -a` — wait for the notification.
+- **USB sticks and external drives** are mounted automatically in `/media/$USER/<label>`; the notification has an "open" button (mc in that directory). Copy progress to them is honest: at most 32 MB of a USB drive's or SD card's data waits in memory (instead of up to 1 GB), so the copy goes at the stick's real speed and 100 % means the data is on it. While at least one is connected, the panel shows **`USB:`** — the drive's name, or how many there are. Clicking it opens a menu right under the panel with every drive (name, size, where it is mounted); click one and only that one is ejected: written out, unmounted (encrypted volumes locked) and powered off, then a notification says it can be removed. A busy drive is left mounted and the notification says so. The same menu is "Eject" in rofi; from a terminal: `cyberdeck-usb eject /dev/sdb`.
 - **Clipboard history** (`Win+Shift+V`, greenclip): the last 100 entries, images included. Kept in `/run/user/…` — in memory, gone after logout or shutdown. KeePassXC, Bitwarden and 1Password windows are never recorded. Clear it: rofi → "Clipboard: clear".
 - **Emoji** (`Win+.`): search by English name (`fire`, `heart`, `thumbs`).
 - **Calculator** (`Win+=`): qalc understands units, percentages and number bases; Enter on the result copies it.

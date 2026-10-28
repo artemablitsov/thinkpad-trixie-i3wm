@@ -43,8 +43,13 @@ Polybar is text, not icons, and every module is a door to a TUI. Whichever monit
   <img src="docs/assets/monitors.svg" alt="A click on the laptop's panel opens pulsemixer in the middle of the external primary monitor" width="100%">
 </p>
 
+<p align="center">
+  <img src="docs/assets/usb.svg" alt="The USB segment on the panel and the eject menu under it" width="100%">
+</p>
+
 | Module | Click opens | Also |
 |---|---|---|
+| `USB:` *(only while a drive is connected)* | a menu under the panel — click a drive to eject just that one | |
 | clock | `ikhal` — calendar and events | |
 | network | `nmtui` | |
 | bluetooth | `bluetuith` | right click — adapter on/off |

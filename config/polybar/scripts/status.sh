@@ -76,6 +76,17 @@ case "${1:-}" in
 esac
 
 # ── сегменты: каждая функция задаёт R — текст сегмента для polybar ────
+# Флешки, USB-диски, SD-карты — сегмент есть, только пока хоть одна подключена:
+# «USB: KINGSTON» (одна) или «USB: 2» (несколько). Клик — меню под панелью,
+# в нём каждая извлекается отдельно (cyberdeck-usb).
+seg_usb() {
+  local n name
+  IFS=$'\t' read -r n name < <(cyberdeck-usb status 2>/dev/null)
+  if [[ -z ${n:-} ]]; then R=""; return; fi
+  name=$(clean "$name"); [[ ${#name} -gt 16 ]] && name="${name:0:15}…"
+  (( n > 1 )) && name=$n
+  R="$(lbl USB)$name"
+}
 seg_net() {
   local line name type icon
   if ! command -v nmcli >/dev/null || ! nmcli -t general status >/dev/null 2>&1; then
@@ -242,7 +253,7 @@ bat_click() {
 }
 
 # ── сборка строки ─────────────────────────────────────────────────────
-SEGMENTS=(net bt vol sys temp)
+SEGMENTS=(usb net bt vol sys temp)
 [[ $MODE == battery ]] && SEGMENTS=(bat)
 declare -A CACHE_R
 DIRTY_SLOW=1
@@ -252,14 +263,16 @@ render() {
   local out="" name action R
   for name in "${SEGMENTS[@]}"; do
     case $name in
-      net|bt|vol|bat)
-        if (( DIRTY_SLOW )) || [[ -z "${CACHE_R[$name]:-}" ]]; then
+      usb|net|bt|vol|bat)
+        if (( DIRTY_SLOW )) || [[ ! -v CACHE_R[$name] ]]; then
           "seg_$name"; CACHE_R[$name]=$R
         fi ;;
       *) "seg_$name"; CACHE_R[$name]=$R ;;
     esac
     R=${CACHE_R[$name]}
+    [[ -n $R ]] || continue                 # пустой сегмент (нет флешек) — без разделителя
     case $name in
+      usb)  action="%{A1:cyberdeck-usb menu:}" ;;
       net)  action="%{A1:cyberdeck-popup network nmtui:}" ;;
       bt)   action="%{A1:cyberdeck-popup bluetooth cyberdeck-bt-tui:}%{A3:$SELF bt-toggle:}" ;;
       vol)  action="%{A1:cyberdeck-popup audio pulsemixer:}%{A3:$SELF vol-mute:}%{A4:$SELF vol-up:}%{A5:$SELF vol-down:}" ;;
@@ -296,6 +309,8 @@ watch_events() {
   fi
   command -v pactl  >/dev/null && { pactl subscribe 2>/dev/null | grep --line-buffered -E "'change' on (sink|server)" | notify_main & }
   command -v nmcli  >/dev/null && { nmcli monitor 2>/dev/null | notify_main & }
+  # Флешку вставили, вынули, смонтировали, отмонтировали
+  command -v udisksctl >/dev/null && { udisksctl monitor 2>/dev/null | notify_main & }
   command -v gdbus  >/dev/null && { gdbus monitor --system --dest org.bluez 2>/dev/null | notify_main & }
 }
 # При выходе гасим и наблюдателей, и запущенные ими pactl/nmcli/gdbus/upower

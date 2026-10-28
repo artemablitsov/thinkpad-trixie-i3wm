@@ -1,0 +1,172 @@
+#!/usr/bin/python3 -I
+"""cyberdeck-usb — флешки, USB-диски и SD-карты: что подключено и извлечение по одной.
+
+  cyberdeck-usb status       для панели: «число<TAB>имя», ничего — если их нет
+  cyberdeck-usb menu         меню rofi под панелью: по строке на флешку, клик — извлечь её
+  cyberdeck-usb eject DISK   извлечь одну: /dev/sdb (все её разделы)
+  cyberdeck-usb eject-all    извлечь все
+
+Извлечь = записать кэш, отмонтировать все разделы флешки (и закрыть
+зашифрованные), затем обесточить её (udisksctl power-off) — после этого её
+можно вынимать. Всё через udisks от имени пользователя, без sudo.
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+
+
+def run(*cmd):
+    return subprocess.run(cmd, capture_output=True, text=True)
+
+
+def notify(title, body="", urgency="normal", tag="usb"):
+    subprocess.run(["notify-send", "-a", "usb", "-u", urgency,
+                    "-h", f"string:x-dunst-stack-tag:{tag}", title, body],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def human(n):
+    n = float(n or 0)
+    for unit in ("B", "K", "M", "G", "T"):
+        if n < 1000 or unit == "T":
+            return f"{n:.0f}{unit}" if unit in ("B", "K") else f"{n:.1f}{unit}"
+        n /= 1000
+
+
+def tree():
+    r = run("lsblk", "-J", "-b", "-p", "-o",
+            "NAME,TYPE,TRAN,RM,HOTPLUG,LABEL,SIZE,MOUNTPOINTS,MODEL,VENDOR")
+    if r.returncode != 0:
+        return []
+    return json.loads(r.stdout).get("blockdevices", [])
+
+
+def descendants(dev):
+    for ch in dev.get("children") or []:
+        yield ch
+        yield from descendants(ch)
+
+
+SYSTEM_MOUNTS = re.compile(r"^(/|/boot(/.*)?|/usr|/var|/home|\[SWAP\])$")
+
+
+def drives():
+    """Съёмные диски: USB (TRAN=usb), SD-карты (mmcblk), прочие hotplug.
+    Диск с системными разделами (/, /boot, swap) не показываем никогда."""
+    out = []
+    for d in tree():
+        if d.get("type") != "disk":
+            continue
+        name = d.get("name", "")
+        removable = d.get("tran") == "usb" or name.startswith("/dev/mmcblk") or d.get("hotplug")
+        if not removable:
+            continue
+        parts = list(descendants(d))
+        mounts = [m for p in [d] + parts for m in (p.get("mountpoints") or []) if m]
+        if any(SYSTEM_MOUNTS.match(m) for m in mounts):
+            continue
+        label = next((p.get("label") for p in [d] + parts if p.get("label")), "")
+        model = " ".join(x for x in ((d.get("vendor") or "").strip(), (d.get("model") or "").strip()) if x)
+        title = label or model or ("SD card" if name.startswith("/dev/mmcblk") else os.path.basename(name))
+        out.append({"disk": name, "title": title, "model": model, "size": d.get("size"),
+                    "mounts": mounts, "parts": parts})
+    return out
+
+
+def eject(drive):
+    """Отмонтировать всё на диске, закрыть LUKS, обесточить. Ошибка → текст."""
+    run("sync")
+    # Глубже — раньше: сначала файловые системы на расшифрованных томах
+    for p in reversed(drive["parts"]):
+        if [m for m in (p.get("mountpoints") or []) if m]:
+            r = run("udisksctl", "unmount", "--no-user-interaction", "-b", p["name"])
+            if r.returncode != 0:
+                err = (r.stderr or r.stdout).strip()
+                if "busy" in err.lower():
+                    return "busy — close the files, terminals and programs that use it"
+                return err.splitlines()[-1] if err else "could not unmount"
+    for p in drive["parts"]:
+        if p.get("type") == "crypt":
+            continue
+        if any(ch.get("type") == "crypt" for ch in p.get("children") or []):
+            run("udisksctl", "lock", "--no-user-interaction", "-b", p["name"])
+    # Обесточить: флешка гаснет, ядро её забывает. Встроенный кардридер (mmcblk)
+    # этого не умеет — не страшно: всё отмонтировано, карту можно вынимать
+    run("udisksctl", "power-off", "--no-user-interaction", "-b", drive["disk"])
+    return None
+
+
+def refresh_panel():
+    subprocess.run(["pkill", "-USR1", "-f", "polybar/scripts/status.sh$"],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def do_eject(drive):
+    err = eject(drive)
+    if err:
+        notify(f"{drive['title']}: not ejected", err, "critical", "usb-" + drive["disk"])
+        return False
+    notify(f"{drive['title']} can be removed", f"{drive['disk']} · {human(drive['size'])}", tag="usb-" + drive["disk"])
+    return True
+
+
+def scale():
+    try:
+        return int(run("cyberdeck-scale").stdout.strip() or 100)
+    except (OSError, ValueError):
+        return 100
+
+
+def menu():
+    ds = drives()
+    if not ds:
+        notify("No USB drives", "Nothing to eject")
+        return
+    rows = []
+    for d in ds:
+        where = ", ".join(d["mounts"]) if d["mounts"] else "not mounted"
+        rows.append(f"⏏  {d['title']}  ·  {human(d['size'])}  ·  {where}")
+    # Выпадающее меню: под панелью, у правого края монитора с мышью
+    s = scale()
+    yoff = (28 * s + 50) // 100 + 4
+    theme = (f"window {{location: north east; anchor: north east; x-offset: -0.5em; "
+             f"y-offset: {yoff}px; width: 38em;}} listview {{lines: {len(rows)};}} "
+             f"inputbar {{enabled: false;}}")
+    r = subprocess.run(["rofi", "-dmenu", "-i", "-m", "-5", "-format", "i", "-p", "eject",
+                        "-theme-str", theme],
+                       input="\n".join(rows), capture_output=True, text=True)
+    if r.returncode != 0 or not r.stdout.strip().isdigit():
+        return
+    i = int(r.stdout.strip())
+    if i < len(ds):
+        do_eject(ds[i])
+    refresh_panel()
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "menu"
+    if cmd == "status":
+        ds = drives()
+        if ds:
+            print(f"{len(ds)}\t{ds[0]['title']}")
+    elif cmd == "menu":
+        menu()
+    elif cmd == "eject" and len(sys.argv) > 2:
+        ds = [d for d in drives() if d["disk"] == sys.argv[2]]
+        if not ds:
+            print(f"cyberdeck-usb: {sys.argv[2]} is not a USB drive", file=sys.stderr)
+            sys.exit(1)
+        sys.exit(0 if do_eject(ds[0]) else 1)
+    elif cmd == "eject-all":
+        ok = all([do_eject(d) for d in drives()])
+        refresh_panel()
+        sys.exit(0 if ok else 1)
+    else:
+        print(__doc__.strip(), file=sys.stderr)
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()
