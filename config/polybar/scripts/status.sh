@@ -81,7 +81,7 @@ esac
 # в нём каждая извлекается отдельно (cyberdeck-usb).
 seg_usb() {
   local n name
-  IFS=$'\t' read -r n name < <(cyberdeck-usb status 2>/dev/null)
+  IFS=$'\t' read -r n name < <(cyberdeck-usb status 2>/dev/null) || true
   if [[ -z ${n:-} ]]; then R=""; return; fi
   name=$(clean "$name"); [[ ${#name} -gt 16 ]] && name="${name:0:15}…"
   (( n > 1 )) && name=$n

@@ -1,0 +1,115 @@
+#!/usr/bin/python3 -I
+"""cyberdeck-ws-orient — направление деления рабочего стола под форму монитора.
+
+i3 решает, делить ли рабочий стол по горизонтали или по вертикали, один раз —
+когда стол создаётся: на вертикальном мониторе — вертикально, на широком —
+горизонтально. Переехав на другой монитор (при входе рабочий стол 1 создаётся
+на любом мониторе и переносится на главный; Win+Ctrl+Shift+стрелка), стол
+сохраняет прежнее направление — и на широком мониторе новое окно ложится под
+старым, на половину высоты.
+
+Здесь направление подгоняется под монитор, но только у столов, где окон ещё
+меньше двух, — там оно не видно, и выбор пользователя (Win+v / Win+b перед
+вторым окном) ничего не теряет. Когда: при запуске i3, при переезде стола
+на другой монитор, при создании стола и при изменении мониторов.
+Запуск: i3 (exec_always), один экземпляр на дисплей.
+"""
+import fcntl
+import json
+import os
+import subprocess
+import sys
+
+
+def i3(*args):
+    r = subprocess.run(["i3-msg", *args], capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else ""
+
+
+def workspaces(node):
+    if node.get("type") == "workspace" and not node.get("name", "").startswith("__"):
+        yield node
+        return
+    for ch in node.get("nodes", []):
+        yield from workspaces(ch)
+
+
+# Столы, которым ещё надо проверить направление: новые, переехавшие, все — при
+# запуске и при смене мониторов. Как только направление верное — стол
+# убирается из списка: дальше его направление — дело пользователя.
+pending = set()
+ALL = "all"
+
+
+def fix():
+    try:
+        tree = json.loads(i3("-t", "get_tree") or "{}")
+    except ValueError:
+        return
+    alive = set()
+    for ws in workspaces(tree):
+        alive.add(ws["id"])
+        if ALL not in pending and ws["id"] not in pending:
+            continue
+        kids = ws.get("nodes", [])
+        r = ws.get("rect", {})
+        want = "splith" if r.get("width", 1) >= r.get("height", 0) else "splitv"
+        if len(kids) > 1 or ws.get("layout") not in ("splith", "splitv") \
+                or (kids and kids[0].get("window") is None):
+            pending.discard(ws["id"])        # окон уже два, или своя раскладка
+            continue
+        if ws["layout"] == want:
+            if kids:
+                pending.discard(ws["id"])
+            continue
+        hv = "h" if want == "splith" else "v"
+        # «split» у единственного окна меняет направление самого стола;
+        # у пустого стола — сам стол (если i3 не примет — исправим с первым окном)
+        target = kids[0]["id"] if kids else ws["id"]
+        i3(f"[con_id={target}] split {hv}")
+        if kids:
+            pending.discard(ws["id"])
+        else:
+            pending.add(ws["id"])            # проверим ещё раз с первым окном
+    pending.discard(ALL)
+    pending.intersection_update(alive)
+
+
+def main():
+    lock = open(f'{os.environ.get("XDG_RUNTIME_DIR", "/tmp")}/cyberdeck-ws-orient'
+                f'{"".join(c for c in os.environ.get("DISPLAY", "") if c.isdigit())}.lock', "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return
+    # i3 перезапустили — подписка рвётся; переподключаемся, пока жив i3
+    while subprocess.run(["i3-msg", "-t", "get_version"], capture_output=True).returncode == 0:
+        pending.add(ALL)
+        fix()
+        p = subprocess.Popen(["i3-msg", "-t", "subscribe", "-m", '["workspace","output","window"]'],
+                             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        for line in p.stdout:
+            try:
+                ev = json.loads(line)
+            except ValueError:
+                continue
+            change = ev.get("change")
+            if "container" in ev:                      # окно
+                if change in ("new", "move") and pending:
+                    fix()
+            elif "current" in ev:                      # рабочий стол
+                if change in ("init", "move") and ev.get("current"):
+                    pending.add(ev["current"]["id"])
+                    fix()
+            else:                                      # мониторы
+                pending.add(ALL)
+                fix()
+        p.wait()
+        subprocess.run(["sleep", "1"])
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit(0)

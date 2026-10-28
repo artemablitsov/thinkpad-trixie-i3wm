@@ -130,8 +130,8 @@ if pkg_installed hiddify; then
   # Каких библиотек ещё не хватает его программам — сразу видно в журнале
   missing=$(dpkg -L hiddify 2>/dev/null | while read -r f; do
               [[ -f $f && -x $f ]] || [[ $f == *.so* && -f $f ]] || continue
-              ldd "$f" 2>/dev/null | awk '/not found/ {print $1}'
-            done | sort -u | xargs)
+              ldd "$f" 2>/dev/null | awk '/not found/ {print $1}' || true
+            done | sort -u | xargs || true)
   [[ -z $missing ]] || warn "Hiddify still lacks libraries: $missing — install the packages that provide them (apt-file search <name>)"
 fi
 

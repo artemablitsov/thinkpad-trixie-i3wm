@@ -44,6 +44,8 @@ i3 + picom + polybar, TUI wherever possible, one Nord theme from GRUB to Qt dial
 | `Win+=` | calculator (qalc): `15% of 2300`, `120 km/h to m/s`, `5 GiB to MB` |
 | `LAlt+LShift` | layout EN ⇄ RU |
 
+A workspace splits along the shape of its monitor: side by side on a wide one, one above the other on a vertical one. When a workspace moves to another monitor (`Win+Ctrl+Shift+←/→`, or workspace 1 at login going to the main monitor), the direction follows the new monitor as long as it has fewer than two windows (`cyberdeck-ws-orient`); once you have two, your own `Win+b` / `Win+v` choice is never touched.
+
 The volume and brightness keys show a thin bar at the bottom of the primary monitor for a second — [xob](https://github.com/florentc/xob), styled in Nord: cyan for volume (grey when muted), yellow for brightness, green for the microphone level (red when the microphone is off), purple for the keyboard backlight. The backlight is switched by the ThinkPad firmware, not by X, so `cyberdeck-osd` listens to UPower's `BrightnessChangedWithSource` signal instead of a key binding. xob isn't in Debian 13, so the installer builds tag v0.3; without it the keys show a dunst notification with a progress bar instead.
 
 ## Polybar (left to right)

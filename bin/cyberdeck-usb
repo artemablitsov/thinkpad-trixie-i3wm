@@ -49,18 +49,23 @@ def descendants(dev):
         yield from descendants(ch)
 
 
-SYSTEM_MOUNTS = re.compile(r"^(/|/boot(/.*)?|/usr|/var|/home|\[SWAP\])$")
+SYSTEM_MOUNTS = re.compile(r"^(/|/boot(/.*)?|/usr|/var|/home|/srv(/.*)?|/opt|\[SWAP\])$")
+# Внутренние шины: у SATA-портов AHCI часто стоит HOTPLUG=1 — это не флешки
+INTERNAL_TRAN = {"sata", "ata", "sas", "nvme", "pcie", "spi"}
 
 
 def drives():
-    """Съёмные диски: USB (TRAN=usb), SD-карты (mmcblk), прочие hotplug.
-    Диск с системными разделами (/, /boot, swap) не показываем никогда."""
+    """Съёмные диски: USB (TRAN=usb), SD-карты (mmcblk), прочие hotplug не на
+    внутренней шине. Диск с системными разделами (/, /boot, swap) не
+    показываем никогда."""
     out = []
     for d in tree():
         if d.get("type") != "disk":
             continue
         name = d.get("name", "")
-        removable = d.get("tran") == "usb" or name.startswith("/dev/mmcblk") or d.get("hotplug")
+        tran = (d.get("tran") or "").lower()
+        removable = (tran == "usb" or name.startswith("/dev/mmcblk")
+                     or (d.get("hotplug") and tran not in INTERNAL_TRAN))
         if not removable:
             continue
         parts = list(descendants(d))
