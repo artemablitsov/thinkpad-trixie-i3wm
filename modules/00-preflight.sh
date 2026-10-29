@@ -28,5 +28,8 @@ ok "User $TARGET_USER added to groups sudo/netdev/bluetooth/video/audio/input"
 # Каталог конфигурации Cyberdeck
 install -d -m 0755 "$CD_ETC"
 [[ -f "$CD_ETC/power.conf" ]] || install -m 0644 "$CYBERDECK_DIR/system/etc/cyberdeck/power.conf" "$CD_ETC/power.conf"
+# Apply model-specific policy before hardware installs the battery service and
+# before power generates systemd sleep settings. Other machines are unchanged.
+"$CYBERDECK_DIR/tools/apply-t14s-gen2-amd-profile.sh" --prepare
 echo "$CYBERDECK_DIR" > "$CD_STATE/repo"
 ok "Preflight checks passed"

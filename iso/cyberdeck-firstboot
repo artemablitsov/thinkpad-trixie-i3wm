@@ -31,7 +31,7 @@ finish() { # finish <код>
 
 if [[ -z $user || ! -x $repo/install.sh ]]; then
   echo "Cyberdeck: no user or no $repo/install.sh — nothing to do."
-  finish 0
+  finish 1
 fi
 
 # Пакеты при установке не запускают свои службы (policy-rc.d → 101), только

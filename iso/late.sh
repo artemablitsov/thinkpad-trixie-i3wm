@@ -13,7 +13,7 @@ if [ -z "$user" ]; then
   # На случай, если имя не нашлось в debconf: первый обычный пользователь
   user=$(awk -F: '$3 >= 1000 && $3 < 60000 {print $1; exit}' /target/etc/passwd)
 fi
-[ -n "$user" ] || { log "no user found — Cyberdeck will not be installed automatically"; exit 0; }
+[ -n "$user" ] || { log "ERROR: no user found; refusing to silently skip Cyberdeck installation"; exit 1; }
 
 home=$(awk -F: -v u="$user" '$1 == u {print $6}' /target/etc/passwd)
 [ -n "$home" ] || home=/home/$user

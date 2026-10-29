@@ -27,6 +27,7 @@ EOF
   #    больше не останавливает запущенные контейнеры).
   install -d -m 0755 /etc/docker
   backup_once /etc/docker/daemon.json
+  cp -a /etc/docker/daemon.json /etc/docker/daemon.json.cyberdeck-previous 2>/dev/null || true
   python3 -I - /etc/docker/daemon.json <<'PY' || warn "Could not update /etc/docker/daemon.json"
 import json, os, sys
 p = sys.argv[1]
@@ -42,7 +43,18 @@ with open(tmp, "w") as f:
     json.dump(cfg, f, indent=2); f.write("\n")
 os.chmod(tmp, 0o644); os.replace(tmp, p)
 PY
-  systemctl is-active --quiet docker.service && systemctl restart docker.service
+  # Validate before touching a running daemon. Preserve existing user policy.
+  if command -v dockerd >/dev/null && ! dockerd --validate --config-file /etc/docker/daemon.json; then
+    warn "Invalid Docker configuration; restoring the pre-change daemon.json if available"
+    if [[ -f /etc/docker/daemon.json.cyberdeck-previous ]]; then
+      cp -a /etc/docker/daemon.json.cyberdeck-previous /etc/docker/daemon.json
+    else
+      rm -f /etc/docker/daemon.json
+    fi
+    # Do not restart Docker with an invalid configuration.
+  elif systemctl is-active --quiet docker.service; then
+    systemctl restart docker.service || warn "Docker restart failed; inspect journalctl -u docker"
+  fi
   # На ноутбуке Docker не держим запущенным: он стартует при первом обращении
   # (docker.socket) — меньше расход батареи и время загрузки.
   systemctl disable docker.service containerd.service >/dev/null 2>&1 || true
